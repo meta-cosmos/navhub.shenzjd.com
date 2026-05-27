@@ -45,7 +45,20 @@ User action → localStorage (instant) → UI update → 3s debounce → /api/gi
 - `src/lib/storage/` — localStorage, GitHub storage, sync manager
 - `src/lib/validation.ts` — Zod schemas + XSS sanitization for all user inputs
 - `src/lib/security.ts` — Rate limiting, origin validation, CSRF protection
+- `src/lib/runtime-policies.ts` — CSP header builder (called from middleware)
 - `src/data/sites.json` — Default seed data
+
+### Middleware & Security Headers
+
+Middleware lives at `src/middleware.ts` (not root-level). It sets CSP, HSTS, X-Frame-Options, Referrer-Policy, and Permissions-Policy on all non-static responses. CSP is dynamically built via `buildContentSecurityPolicy()` from `src/lib/runtime-policies.ts`.
+
+### Auth Flow
+
+GitHub OAuth: `src/app/api/auth/github/` → GitHub → `src/app/api/auth/callback/github/` → sets HttpOnly cookie → `src/app/api/auth/session/` (verify) → `src/app/api/auth/logout/` (clear). Server-side routes read token from cookies; frontend never sees the raw token.
+
+### Deployment
+
+Build uses Next.js standalone output (`output: "standalone"` in `next.config.ts`). The `npm run build` script runs `scripts/sync-standalone-assets.mjs` after `next build` to copy static assets into the standalone directory. Docker image (`Dockerfile`) uses multi-stage build and runs `node server.js` directly.
 
 ### Patterns
 
@@ -68,6 +81,8 @@ User action → localStorage (instant) → UI update → 3s debounce → /api/gi
 ## Environment Variables
 
 Copy `.env.example` to `.env.local`:
-- `NEXT_PUBLIC_GITHUB_CLIENT_ID` (required)
-- `GITHUB_CLIENT_SECRET` (required)
+- `NEXT_PUBLIC_GITHUB_CLIENT_ID` (required) — also served at runtime via `/api/runtime-config` for Docker deployments
+- `GITHUB_CLIENT_SECRET` (required, server-only)
 - `NEXT_PUBLIC_GITHUB_OWNER`, `NEXT_PUBLIC_GITHUB_REPO`, `NEXT_PUBLIC_DATA_FILE_PATH` (optional overrides)
+
+`NEXT_PUBLIC_GITHUB_CLIENT_ID` is fetched client-side from `/api/runtime-config` (see `src/lib/runtime-public-config.ts`), so Docker images can be built once and configured at container startup.

@@ -48,6 +48,7 @@ export function SiteCard({
   const [isLoading, setIsLoading] = useState(false);
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const [menuPosition, setMenuPosition] = useState<"auto" | "flip-up" | "flip-left">("auto");
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const touchStartPos = useRef<{ x: number; y: number } | null>(null);
 
@@ -67,6 +68,29 @@ export function SiteCard({
       document.removeEventListener("click", handleClickOutside);
     };
   }, [isContextMenuOpen]);
+
+  useEffect(() => {
+    if (!isContextMenuOpen || !contextMenuRef.current || !cardRef.current) {
+      setMenuPosition("auto");
+      return;
+    }
+    const menuEl = contextMenuRef.current;
+    const cardRect = cardRef.current.getBoundingClientRect();
+    const menuRect = menuEl.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    let pos: "auto" | "flip-up" | "flip-left" = "auto";
+    if (view === "grid") {
+      if (cardRect.bottom + menuRect.height > vh && cardRect.top > menuRect.height) {
+        pos = "flip-up";
+      }
+      if (cardRect.left + menuRect.width > vw) {
+        pos = "flip-left";
+      }
+    }
+    setMenuPosition(pos);
+  }, [isContextMenuOpen, view]);
 
   useEffect(() => {
     return () => {
@@ -175,7 +199,13 @@ export function SiteCard({
       aria-label="站点操作菜单"
       className={cn(
         "absolute z-[9999] w-auto",
-        view === "grid" ? "top-full mt-2 left-0" : "left-4 top-1/2 -translate-y-1/2",
+        view === "grid"
+          ? menuPosition === "flip-up"
+            ? "bottom-full mb-2 left-0"
+            : menuPosition === "flip-left"
+              ? "top-full mt-2 right-0"
+              : "top-full mt-2 left-0"
+          : "left-4 top-1/2 -translate-y-1/2",
         "bg-[var(--background-secondary)]/95 backdrop-blur-xl",
         "border border-[var(--border)] rounded-[var(--radius-xl)]",
         "shadow-[0_16px_36px_-14px_rgba(8,41,50,0.35)]",

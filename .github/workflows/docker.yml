@@ -81,12 +81,12 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           password: ${{ secrets.DEPLOY_PASSWORD }}
           script: |
-            IMAGE="${{ env.IMAGE }}:latest"
+            IMAGE="ghcr.io/${{ github.repository }}:latest"
             sudo docker pull "$IMAGE"
-            sudo docker stop ${{ env.CONTAINER_NAME }} || true
-            sudo docker rm ${{ env.CONTAINER_NAME }} || true
+            sudo docker stop nav.shenzjd.com || true
+            sudo docker rm nav.shenzjd.com || true
             sudo docker run -d \
-              --name ${{ env.CONTAINER_NAME }} \
+              --name nav.shenzjd.com \
               --restart unless-stopped \
               -e NODE_ENV=production \
               -e HOSTNAME=0.0.0.0 \

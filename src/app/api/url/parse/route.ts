@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { URL_PARSER_CONFIG } from "@/lib/config";
 import { normalizeExternalAssetUrl } from "@/lib/runtime-policies";
+import {
+  assertSafeExternalUrl,
+  readResponseTextWithLimit,
+  safeFetchExternalUrl,
+} from "@/lib/server/safe-external-fetch";
 
 interface ParsedResult {
   title: string;
@@ -86,31 +91,6 @@ function normalizeUrl(input: string): URL {
   return parsed;
 }
 
-const BLOCKED_HOSTNAMES: readonly RegExp[] = [
-  /^127\./,
-  /^0\./,
-  /^10\./,
-  /^172\.(1[6-9]|2\d|3[01])\./,
-  /^192\.168\./,
-  /^169\.254\./,
-  /^::1$/,
-  /^fc/,
-  /^fd/,
-  /^fe80:/,
-  /^localhost$/i,
-  /^metadata\.google\.internal$/i,
-];
-
-function isBlockedHostname(hostname: string): boolean {
-  return BLOCKED_HOSTNAMES.some((re) => re.test(hostname));
-}
-
-function assertSafeUrl(parsed: URL): void {
-  if (isBlockedHostname(parsed.hostname)) {
-    throw new Error("不允许访问该地址");
-  }
-}
-
 function titleFromHostname(hostname: string): string {
   const base = hostname.replace(/^www\./i, "").split(".")[0] || "website";
   return (
@@ -182,7 +162,7 @@ function extractIconHref(html: string): string {
 }
 
 async function fetchJsonWithTimeout(url: string, timeoutMs: number) {
-  const response = await fetch(url, {
+  const response = await safeFetchExternalUrl(url, {
     signal: AbortSignal.timeout(timeoutMs),
     headers: {
       "User-Agent": "Mozilla/5.0 (compatible; NavHubBot/1.0; +https://navhub.shenzjd.com)",
@@ -200,9 +180,8 @@ async function fetchJsonWithTimeout(url: string, timeoutMs: number) {
 
 async function resolveFromHtml(target: string): Promise<{ title?: string; icon?: string } | null> {
   try {
-    const response = await fetch(target, {
+    const response = await safeFetchExternalUrl(target, {
       signal: AbortSignal.timeout(8000),
-      redirect: "follow",
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; NavHubBot/1.0; +https://navhub.shenzjd.com)",
         Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -225,7 +204,7 @@ async function resolveFromHtml(target: string): Promise<{ title?: string; icon?:
       return null;
     }
 
-    const html = (await response.text()).slice(0, 300_000);
+    const html = await readResponseTextWithLimit(response, 300_000);
 
     const title =
       extractMeta(html, "og:title") || extractMeta(html, "twitter:title") || extractTitleTag(html);
@@ -308,7 +287,7 @@ export async function GET(request: NextRequest) {
   let parsedUrl: URL;
   try {
     parsedUrl = normalizeUrl(urlParam);
-    assertSafeUrl(parsedUrl);
+    await assertSafeExternalUrl(parsedUrl);
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "URL 无效" },

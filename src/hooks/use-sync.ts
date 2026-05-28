@@ -1,7 +1,7 @@
 /**\n * 同步状态 Hook\n * 管理同步状态和网络状态\n */
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   SyncManager,
   SyncStatus,
@@ -21,29 +21,30 @@ interface UseSyncReturn {
   syncNow: (data: NavData) => Promise<void>;
   manualSync: () => Promise<SyncResult>; // 返回同步结果
   refresh: () => Promise<NavData | null>;
-  setToken: (token: string) => void;
 }
 
 /**
  * 同步状态 Hook
  */
 export function useSync(token?: string): UseSyncReturn {
-  const [status, setStatus] = useState<SyncStatus>(SyncStatus.IDLE);
-  const [isOnline, setIsOnline] = useState(true);
-  const [lastSync, setLastSync] = useState<Date | null>(null);
+  const [status, setStatus] = useState<SyncStatus>(() =>
+    typeof navigator !== "undefined" && !navigator.onLine ? SyncStatus.OFFLINE : SyncStatus.IDLE
+  );
+  const [isOnline, setIsOnline] = useState(() =>
+    typeof navigator === "undefined" ? true : navigator.onLine
+  );
+  const [lastSync, setLastSync] = useState<Date | null>(() => {
+    if (typeof localStorage === "undefined") return null;
+    const lastSyncTime = localStorage.getItem("nav_last_sync");
+    return lastSyncTime ? new Date(parseInt(lastSyncTime)) : null;
+  });
   const [syncStep, setSyncStep] = useState<SyncStepInfo | null>(null);
-  const [syncManager, setSyncManager] = useState<SyncManager | null>(null);
-  const [currentToken, setCurrentToken] = useState<string | undefined>(token);
-
-  // 当 token 参数变化或需要刷新认证状态时更新 currentToken
-  useEffect(() => {
-    setCurrentToken(token);
-  }, [token]);
+  const syncManagerRef = useRef<SyncManager | null>(null);
 
   // 初始化同步管理器
   useEffect(() => {
     const manager = new SyncManager({
-      token: currentToken,
+      token,
       onSuccess: () => {
         setLastSync(new Date());
         setSyncStep(null);
@@ -60,12 +61,15 @@ export function useSync(token?: string): UseSyncReturn {
       },
     });
 
-    setSyncManager(manager);
+    syncManagerRef.current = manager;
 
     return () => {
+      if (syncManagerRef.current === manager) {
+        syncManagerRef.current = null;
+      }
       manager.destroy();
     };
-  }, [currentToken]);
+  }, [token]);
 
   // 监听网络状态
   useEffect(() => {
@@ -82,24 +86,10 @@ export function useSync(token?: string): UseSyncReturn {
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
 
-    // 初始检查
-    setIsOnline(navigator.onLine);
-    if (!navigator.onLine) {
-      setStatus(SyncStatus.OFFLINE);
-    }
-
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, []);
-
-  // 获取最后同步时间
-  useEffect(() => {
-    const lastSyncTime = localStorage.getItem("nav_last_sync");
-    if (lastSyncTime) {
-      setLastSync(new Date(parseInt(lastSyncTime)));
-    }
   }, []);
 
   /**
@@ -113,17 +103,17 @@ export function useSync(token?: string): UseSyncReturn {
         return;
       }
 
-      if (!currentToken) {
+      if (!token) {
         setStatus(SyncStatus.IDLE); // 没有 token，不进行 GitHub 同步
         return;
       }
 
-      // 如果 syncManager 的 token 不匹配，需要重新创建
+      const syncManager = syncManagerRef.current;
       if (syncManager) {
         syncManager.sync(data);
       }
     },
-    [syncManager, isOnline, currentToken]
+    [isOnline, token]
   );
 
   /**
@@ -135,11 +125,11 @@ export function useSync(token?: string): UseSyncReturn {
         throw new Error("当前离线，无法同步");
       }
 
-      if (!currentToken) {
+      if (!token) {
         throw new Error("未认证用户");
       }
 
-      // 优先使用当前同步管理器执行立即同步，确保本地最新数据写入远端
+      const syncManager = syncManagerRef.current;
       if (syncManager) {
         await syncManager.syncNow(data);
         setLastSync(new Date());
@@ -147,10 +137,10 @@ export function useSync(token?: string): UseSyncReturn {
       }
 
       // 回退到手动同步
-      await manualSyncFn(currentToken);
+      await manualSyncFn(token);
       setLastSync(new Date());
     },
-    [isOnline, currentToken, syncManager]
+    [isOnline, token]
   );
 
   /**
@@ -163,14 +153,14 @@ export function useSync(token?: string): UseSyncReturn {
     }
 
     // 每次执行时都重新获取最新的 token
-    if (!currentToken) {
+    if (!token) {
       throw new Error("未认证用户");
     }
 
-    const result = await manualSyncFn(currentToken);
+    const result = await manualSyncFn(token);
     setLastSync(new Date());
     return result;
-  }, [isOnline, currentToken]);
+  }, [isOnline, token]);
 
   /**
    * 刷新数据（从 GitHub 拉取）
@@ -184,7 +174,7 @@ export function useSync(token?: string): UseSyncReturn {
 
     try {
       // 每次刷新时都重新获取最新的 token
-      const data = await initialSync(currentToken);
+      const data = await initialSync(token);
 
       if (data) {
         setLastSync(new Date());
@@ -196,14 +186,7 @@ export function useSync(token?: string): UseSyncReturn {
       const localData = localStorage.getItem("nav_data");
       return localData ? JSON.parse(localData) : null;
     }
-  }, [isOnline, currentToken]);
-
-  /**
-   * 设置 Token
-   */
-  const setToken = useCallback((token: string) => {
-    setCurrentToken(token);
-  }, []);
+  }, [isOnline, token]);
 
   return {
     status,
@@ -214,6 +197,5 @@ export function useSync(token?: string): UseSyncReturn {
     syncNow,
     manualSync: handleManualSync,
     refresh,
-    setToken,
   };
 }

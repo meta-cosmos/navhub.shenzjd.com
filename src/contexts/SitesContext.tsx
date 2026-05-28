@@ -52,39 +52,6 @@ export function SitesProvider({ children }: { children: ReactNode }) {
   const [githubToken, setGithubToken] = useState<string | undefined>(undefined);
   const [isGuestMode, setIsGuestMode] = useState(false);
 
-  // 获取 GitHub token（如果已登录）
-  // 这个 effect 会在组件挂载时运行，并且监听 storage 变化以响应登录状态更新
-  useEffect(() => {
-    const checkAuth = () => {
-      void (async () => {
-        const auth = await getAuthState(true);
-        if (auth.token) {
-          setGithubToken(auth.token);
-          setIsGuestMode(false);
-        } else {
-          // 未登录，使用访客模式（只读你的数据，无需 token）
-          setGithubToken(undefined);
-          setIsGuestMode(true);
-        }
-      })();
-    };
-
-    // 初始检查
-    checkAuth();
-
-    // 监听 storage 变化（用于响应登录/登出）
-    // 监听自定义事件（用于登录后的页面刷新）
-    const handleAuthUpdate = () => {
-      checkAuth();
-    };
-
-    window.addEventListener("auth-update", handleAuthUpdate);
-
-    return () => {
-      window.removeEventListener("auth-update", handleAuthUpdate);
-    };
-  }, []);
-
   const {
     status: syncStatus,
     syncStep,
@@ -135,6 +102,7 @@ export function SitesProvider({ children }: { children: ReactNode }) {
         setIsGuestMode(false);
       } else {
         // 未登录，使用访客模式
+        setGithubToken(undefined);
         setIsGuestMode(true);
       }
 

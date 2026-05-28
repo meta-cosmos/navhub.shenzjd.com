@@ -74,6 +74,24 @@ export function SiteCard({
     };
   }, []);
 
+  const openContextMenu = () => {
+    if (isGuestMode) return;
+    setIsContextMenuOpen(true);
+  };
+
+  // Use native event listener to reliably prevent browser context menu
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+    const handler = (e: Event) => {
+      if (isGuestMode) return;
+      e.preventDefault();
+      openContextMenu();
+    };
+    el.addEventListener("contextmenu", handler);
+    return () => el.removeEventListener("contextmenu", handler);
+  }, [isGuestMode]);
+
   const getDomain = () => {
     try {
       return new URL(url).hostname;
@@ -106,23 +124,6 @@ export function SiteCard({
       return;
     }
     window.open(url, "_blank", "noopener,noreferrer");
-  };
-
-  const openContextMenu = () => {
-    if (isGuestMode) return;
-    setIsContextMenuOpen(true);
-  };
-
-  const handleContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    openContextMenu();
-  };
-
-  const handleContextMenuCapture = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    openContextMenu();
   };
 
   const handleSecondaryPointerCapture = (e: React.MouseEvent | React.PointerEvent) => {
@@ -301,8 +302,6 @@ export function SiteCard({
 
   const cardEvents = {
     onClick: handleCardClick,
-    onContextMenuCapture: handleContextMenuCapture,
-    onContextMenu: handleContextMenu,
     onPointerDownCapture: handleSecondaryPointerCapture,
     onMouseDownCapture: handleSecondaryPointerCapture,
     onTouchStart: handleTouchStart,

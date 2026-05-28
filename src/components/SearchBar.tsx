@@ -135,10 +135,6 @@ export function SearchStatus({ query, resultsCount }: { query: string; resultsCo
   );
 }
 
-export function CategoryFilter() {
-  return null;
-}
-
 export function ViewToggle({
   view,
   onViewChange,

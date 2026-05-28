@@ -68,8 +68,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            NEXT_PUBLIC_GITHUB_CLIENT_ID=${{ secrets.NEXT_PUBLIC_GITHUB_CLIENT_ID }}
 
   deploy:
     needs: build
@@ -92,8 +90,7 @@ jobs:
               --restart unless-stopped \
               -e NODE_ENV=production \
               -e HOSTNAME=0.0.0.0 \
-              -e NEXT_PUBLIC_GITHUB_CLIENT_ID=${{ secrets.NEXT_PUBLIC_GITHUB_CLIENT_ID }} \
-              -e GITHUB_CLIENT_SECRET=${{ secrets.GITHUB_CLIENT_SECRET }} \
+              --env-file /opt/1panel/apps/openresty/openresty/www/sites/navhub.shenzjd.com/index/.env \
               -p 3000:3000 \
               -v navhub_data:/app/data \
               "$IMAGE"

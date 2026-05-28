@@ -34,7 +34,7 @@ User action → localStorage (instant) → UI update → 3s debounce → /api/gi
 ```
 
 - **localStorage** (`src/lib/storage/local-storage.ts`): Primary client-side store, key `nav_data`
-- **Sync engine** (`src/lib/storage/sync-manager.ts`): Bidirectional sync with conflict resolution by timestamp, 3s debounce, exponential backoff retry
+- **Sync engine** (`src/lib/storage/sync-manager.ts`): Bidirectional sync with fingerprint-based conflict detection (rejects silent overwrite when both sides changed since last sync), 3s debounce, exponential backoff retry
 - **Server proxy** (`src/app/api/github/data/route.ts`): Reads GitHub token from HttpOnly cookies, proxies read/write to GitHub
 
 ### Data Model

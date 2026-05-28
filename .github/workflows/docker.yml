@@ -95,4 +95,6 @@ jobs:
               -p 5271:3000 \
               -v navhub_data:/app/data \
               "$IMAGE"
+            echo "=== 验证环境变量 ==="
+            sudo docker exec navhub.shenzjd.com env | grep -E "GITHUB_CLIENT|NODE_ENV"
             sudo docker image prune -f

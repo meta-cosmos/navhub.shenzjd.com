@@ -8,8 +8,8 @@ import { generateCSRFToken } from "@/lib/security";
 
 export async function GET(request: NextRequest) {
   const forwardedHost = request.headers.get("x-forwarded-host");
-  const protocol = request.headers.get("x-forwarded-proto") || "https";
-  const origin = forwardedHost ? `${protocol}://${forwardedHost}` : new URL(request.url).origin;
+  // Behind reverse proxy: always use https since proxy handles TLS termination
+  const origin = forwardedHost ? `https://${forwardedHost}` : new URL(request.url).origin;
 
   const clientId = process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID;
   if (!clientId) {

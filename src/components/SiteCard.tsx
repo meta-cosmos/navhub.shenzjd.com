@@ -98,6 +98,17 @@ export function SiteCard({
     };
   }, []);
 
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el || isGuestMode) return;
+    const handleNativeContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      setIsContextMenuOpen(true);
+    };
+    el.addEventListener("contextmenu", handleNativeContextMenu, { capture: true });
+    return () => el.removeEventListener("contextmenu", handleNativeContextMenu, { capture: true });
+  }, [isGuestMode]);
+
   const getDomain = () => {
     try {
       return new URL(url).hostname;

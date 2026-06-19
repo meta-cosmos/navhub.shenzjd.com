@@ -33,6 +33,12 @@ export function AppHeader() {
   const [githubClientId, setGithubClientId] = useState("");
   const [runtimeConfigLoaded, setRuntimeConfigLoaded] = useState(false);
   const [runtimeConfig, setRuntimeConfig] = useState<RuntimePublicConfig | null>(null);
+  // mounted 保护:isOnline / syncStep 依赖客户端状态(navigator),SSR 与 CSR 首次渲染可能不一致,
+  // 这些 conditional 在挂载后才渲染,避免 hydration mismatch。
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     void (async () => {
@@ -151,7 +157,7 @@ export function AppHeader() {
 
   return (
     <>
-      {syncStep && (
+      {mounted && syncStep && (
         <div className="fixed left-0 right-0 top-0 z-50 border-b border-[var(--border)] bg-[var(--background-secondary)]/95 px-4 py-3 backdrop-blur-md">
           <div className="mx-auto max-w-[1200px]">
             <div className="flex items-center gap-3">
@@ -177,7 +183,7 @@ export function AppHeader() {
         </div>
       )}
 
-      {!isOnline && (
+      {mounted && !isOnline && (
         <div className="border-b border-warning/35 bg-warning/12 px-4 py-2 text-center text-sm text-[var(--foreground-secondary)]">
           ⚠️ 当前处于离线状态，数据将保存到本地，恢复网络后自动同步
         </div>
@@ -185,14 +191,14 @@ export function AppHeader() {
 
       <header
         className="glass sticky top-0 z-40 w-full border-b border-[var(--border)]"
-        style={{ marginTop: syncStep ? "60px" : "0px" }}
+        style={{ marginTop: mounted && syncStep ? "60px" : "0px" }}
       >
         <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-4 md:px-6">
           <div
             className="flex cursor-pointer items-center gap-3"
             onClick={() => (window.location.href = "/")}
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--primary-200)] bg-gradient-to-br from-[var(--primary-600)] to-[var(--primary-800)] text-lg font-bold text-white shadow-[0_12px_24px_-14px_rgba(15,108,97,0.85)]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--primary-600)] text-lg font-bold text-white shadow-[var(--shadow-sm)]">
               N
             </div>
             <h1 className="text-xl font-extrabold tracking-tight text-gradient">NavHub</h1>

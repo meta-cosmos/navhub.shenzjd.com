@@ -44,6 +44,7 @@ export const SiteCard = memo(function SiteCard({
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuPosition, setMenuPosition] = useState<"auto" | "flip-up">("auto");
 
@@ -179,14 +180,17 @@ export const SiteCard = memo(function SiteCard({
           role="button"
           tabIndex={0}
           onClick={handleCardClick}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
           className="site-card group cursor-pointer bg-[var(--background-secondary)]/85"
           title="点击打开链接"
         >
-          {/* 三点菜单按钮 — 始终可见，悬停高亮 */}
-          <div className="absolute top-1 right-1 z-10">
+          {/* 三点菜单按钮 — 仅 hover 当前卡片时显示 */}
+          <div className="absolute top-1 right-1 z-10" style={{ opacity: isHovered || isMenuOpen ? 1 : 0, transition: 'opacity 150ms' }}>
             <button
               data-menu-trigger
               onClick={handleMenuToggle}
+              onMouseEnter={() => setIsHovered(true)}
               className="p-1 rounded-full bg-[var(--background-secondary)]/80 hover:bg-[var(--muted)] transition-colors cursor-pointer"
               aria-label="更多操作"
             >
@@ -230,6 +234,8 @@ export const SiteCard = memo(function SiteCard({
     <>
       <div
         onClick={handleCardClick}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
         className="relative flex items-center gap-3 p-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--background-secondary)]/90 transition-all duration-200 hover:shadow-md hover:border-[var(--primary-300)] cursor-pointer group"
         title="点击打开链接"
       >
@@ -252,11 +258,12 @@ export const SiteCard = memo(function SiteCard({
           </div>
         </div>
 
-        {/* 三点菜单按钮 — 始终可见，悬停高亮 */}
-        <div className="relative flex-shrink-0">
+        {/* 三点菜单按钮 — 仅 hover 当前卡片时显示 */}
+        <div className="relative flex-shrink-0" style={{ opacity: isHovered || isMenuOpen ? 1 : 0, transition: 'opacity 150ms' }}>
           <button
             data-menu-trigger
             onClick={handleMenuToggle}
+            onMouseEnter={() => setIsHovered(true)}
             className="p-1.5 rounded-[var(--radius-sm)] hover:bg-[var(--muted)] transition-colors cursor-pointer"
             aria-label="更多操作"
           >

@@ -6,7 +6,7 @@
 
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo, memo } from "react";
 import { useSites } from "@/contexts/SitesContext";
 import { cn } from "@/lib/utils";
 import { FaviconImage } from "@/components/FaviconImage";
@@ -28,17 +28,15 @@ interface SiteCardProps {
   url: string;
   favicon?: string;
   categoryId: string;
-  onSiteChange?: () => void;
   view?: "grid" | "list";
 }
 
-export function SiteCard({
+export const SiteCard = memo(function SiteCard({
   id,
   title: initialTitle,
   url,
   favicon = "",
   categoryId,
-  onSiteChange,
   view = "grid",
 }: SiteCardProps) {
   const { updateSite, deleteSite, isGuestMode } = useSites();
@@ -54,7 +52,6 @@ export function SiteCard({
 
   useEffect(() => {
     if (!isContextMenuOpen) return;
-    document.body.style.overflow = "hidden";
 
     const handleClickOutside = (e: MouseEvent) => {
       if (contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
@@ -64,7 +61,6 @@ export function SiteCard({
 
     document.addEventListener("click", handleClickOutside);
     return () => {
-      document.body.style.overflow = "";
       document.removeEventListener("click", handleClickOutside);
     };
   }, [isContextMenuOpen]);
@@ -98,28 +94,16 @@ export function SiteCard({
     };
   }, []);
 
-  useEffect(() => {
-    const el = cardRef.current;
-    if (!el || isGuestMode) return;
-    const handleNativeContextMenu = (e: MouseEvent) => {
-      e.preventDefault();
-      setIsContextMenuOpen(true);
-    };
-    el.addEventListener("contextmenu", handleNativeContextMenu, { capture: true });
-    return () => el.removeEventListener("contextmenu", handleNativeContextMenu, { capture: true });
-  }, [isGuestMode]);
-
-  const getDomain = () => {
+  const domain = useMemo(() => {
     try {
       return new URL(url).hostname;
     } catch {
       return url;
     }
-  };
+  }, [url]);
 
   const handleEdit = async (data: { title: string; url: string; favicon: string }) => {
     await updateSite(categoryId, id, { id, ...data });
-    onSiteChange?.();
   };
 
   const handleDelete = async () => {
@@ -127,7 +111,6 @@ export function SiteCard({
       setIsLoading(true);
       await deleteSite(categoryId, id);
       setIsDeleteAlertOpen(false);
-      onSiteChange?.();
     } finally {
       setIsLoading(false);
     }
@@ -380,15 +363,17 @@ export function SiteCard({
           </span>
           {contextMenu}
         </div>
-        <EditSiteDialog
-          open={isEditDialogOpen}
-          onOpenChange={setIsEditDialogOpen}
-          initialTitle={initialTitle}
-          initialUrl={url}
-          initialFavicon={favicon}
-          onSave={handleEdit}
-        />
-        {deleteDialog}
+        {isEditDialogOpen && (
+          <EditSiteDialog
+            open={isEditDialogOpen}
+            onOpenChange={setIsEditDialogOpen}
+            initialTitle={initialTitle}
+            initialUrl={url}
+            initialFavicon={favicon}
+            onSave={handleEdit}
+          />
+        )}
+        {isDeleteAlertOpen && deleteDialog}
       </>
     );
   }
@@ -420,20 +405,22 @@ export function SiteCard({
           <div className="font-medium text-[var(--foreground)] truncate">{initialTitle}</div>
           <div className="text-xs text-[var(--foreground-secondary)] truncate flex items-center gap-1">
             <Globe className="w-3 h-3" />
-            {getDomain()}
+            {domain}
           </div>
         </div>
         {contextMenu}
       </div>
-      <EditSiteDialog
-        open={isEditDialogOpen}
-        onOpenChange={setIsEditDialogOpen}
-        initialTitle={initialTitle}
-        initialUrl={url}
-        initialFavicon={favicon}
-        onSave={handleEdit}
-      />
-      {deleteDialog}
+      {isEditDialogOpen && (
+        <EditSiteDialog
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          initialTitle={initialTitle}
+          initialUrl={url}
+          initialFavicon={favicon}
+          onSave={handleEdit}
+        />
+      )}
+      {isDeleteAlertOpen && deleteDialog}
     </>
   );
-}
+});

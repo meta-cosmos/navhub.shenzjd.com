@@ -5,7 +5,15 @@
 
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  ReactNode,
+} from "react";
 import { useSync } from "@/hooks/use-sync";
 import { useToast } from "@/components/ui/toast";
 import {
@@ -18,6 +26,12 @@ import {
 import { getAuthState } from "@/lib/auth";
 import { getDataFromGitHub, getYourDataFromGitHub } from "@/lib/storage/github-storage";
 import type { SyncStepInfo } from "@/lib/storage/sync-manager";
+
+interface AuthUser {
+  id: string;
+  name: string;
+  avatar: string;
+}
 
 interface SitesContextType {
   sites: Category[];
@@ -43,9 +57,17 @@ interface SitesContextType {
     error?: string;
   }>;
   isGuestMode: boolean;
+  authUser: AuthUser | null;
 }
 
 const SitesContext = createContext<SitesContextType | null>(null);
+
+const defaultCategory: Category = {
+  id: "default",
+  name: "默认分类",
+  sort: 0,
+  sites: [],
+};
 
 export function SitesProvider({ children }: { children: ReactNode }) {
   const [sites, setSites] = useState<Category[]>([]);
@@ -53,6 +75,7 @@ export function SitesProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [githubToken, setGithubToken] = useState<string | undefined>(undefined);
   const [isGuestMode, setIsGuestMode] = useState(false);
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const { showToast } = useToast();
 
   const {
@@ -67,7 +90,6 @@ export function SitesProvider({ children }: { children: ReactNode }) {
 
   // 包装 manualSync 以在同步后刷新数据
   const manualSync = useCallback(async () => {
-    // 访客模式不允许同步
     if (isGuestMode) {
       return {
         success: false,
@@ -89,103 +111,118 @@ export function SitesProvider({ children }: { children: ReactNode }) {
     return result;
   }, [runManualSync, isGuestMode]);
 
-  // 初始化：从本地或 GitHub 加载数据
-  const fetchSites = useCallback(async (forceRefresh = false) => {
+  /**
+   * 初始化：从本地或 GitHub 加载数据
+   * 优化策略：
+   * 1. 本地数据优先展示（消除 loading 转圈）
+   * 2. 不带 forceRefresh 调用 getAuthState（利用缓存，不发网络请求）
+   * 3. 认证检查与远程数据获取并行执行
+   */
+  const fetchSites = useCallback(async (_forceRefresh = false) => {
     try {
-      setLoading(true);
       setError(null);
 
-      // 每次都重新检查认证状态
-      const auth = await getAuthState(true);
-      const currentToken = auth.token;
+      // 第一步：立即检查本地数据，有就先展示，消除 loading 转圈
+      const localData = loadFromLocalStorage();
+      if (localData?.categories && localData.categories.length > 0) {
+        const isDefault =
+          localData.categories.length === 1 &&
+          localData.categories[0].id === "default" &&
+          localData.categories[0].sites.length === 0 &&
+          localData.lastModified === 0;
+
+        if (!isDefault) {
+          setSites(localData.categories);
+          setLoading(false);
+        }
+      }
+
+      // 第二步：并行获取认证状态和远程数据（不阻塞 UI）
+      const [auth, remoteResult] = await Promise.allSettled([
+        getAuthState(), // 不带 forceRefresh，命中模块级缓存
+        _forceRefresh
+          ? getAuthState().then((a) => (a.token ? getDataFromGitHub(a.token) : null))
+          : Promise.resolve(null),
+      ]);
+
+      // 处理认证结果
+      const authState = auth.status === "fulfilled" ? auth.value : { token: null, user: null };
+      const currentToken = authState.token;
 
       if (currentToken) {
-        // 已登录
         setGithubToken(currentToken);
         setIsGuestMode(false);
+        setAuthUser(authState.user);
       } else {
-        // 未登录，使用访客模式
         setGithubToken(undefined);
         setIsGuestMode(true);
+        setAuthUser(null);
       }
 
-      // 访客模式：每次都直接从你的 GitHub 拉取最新数据，不使用本地缓存
-      if (!currentToken) {
-        try {
-          const yourData = await getYourDataFromGitHub();
-          if (yourData?.categories && yourData.categories.length > 0) {
-            saveSitesToLocalStorage(yourData.categories);
-            setSites(yourData.categories);
-            setLoading(false);
-            return;
-          }
-        } catch (guestError) {
-          console.error("读取示例数据失败:", guestError);
-          if (guestError instanceof Error && guestError.message.includes("运行时配置加载失败")) {
-            throw guestError;
-          }
-        }
-        // 如果 GitHub 拉取失败，继续执行后面的 fallback 逻辑
+      // 处理远程数据（如果有 forceRefresh 结果）
+      if (
+        remoteResult.status === "fulfilled" &&
+        remoteResult.value?.categories &&
+        remoteResult.value.categories.length > 0
+      ) {
+        saveSitesToLocalStorage(remoteResult.value.categories);
+        setSites(remoteResult.value.categories);
+        setLoading(false);
+        return;
       }
 
-      // 已登录模式：forceRefresh=true 表示需要强制从 GitHub 拉取
-      if (forceRefresh && currentToken) {
-        try {
-          const githubData = await getDataFromGitHub(currentToken);
-          if (githubData?.categories && githubData.categories.length > 0) {
-            saveSitesToLocalStorage(githubData.categories);
-            setSites(githubData.categories);
-            setLoading(false);
-            return;
+      // 第三步：如果本地没有有效数据，根据模式拉取
+      const hasValidLocal =
+        localData?.categories &&
+        localData.categories.length > 0 &&
+        !(
+          localData.categories.length === 1 &&
+          localData.categories[0].id === "default" &&
+          localData.categories[0].sites.length === 0 &&
+          localData.lastModified === 0
+        );
+
+      if (!hasValidLocal) {
+        if (!currentToken) {
+          // 访客模式：从 GitHub 拉取示例数据
+          try {
+            const yourData = await getYourDataFromGitHub();
+            if (yourData?.categories && yourData.categories.length > 0) {
+              saveSitesToLocalStorage(yourData.categories);
+              setSites(yourData.categories);
+              setLoading(false);
+              return;
+            }
+          } catch (guestError) {
+            console.error("读取示例数据失败:", guestError);
+            if (
+              guestError instanceof Error &&
+              guestError.message.includes("运行时配置加载失败")
+            ) {
+              throw guestError;
+            }
           }
-        } catch (githubError) {
-          console.error("从 GitHub 拉取失败:", githubError);
-        }
-      }
-
-      // 已登录模式：普通加载，检查本地数据是否有效
-      if (currentToken) {
-        const localData = loadFromLocalStorage();
-
-        // 如果本地有有效数据（未过期且有真实内容），直接使用
-        if (localData?.categories && localData.categories.length > 0) {
-          // 额外检查：如果是空的默认分类且时间戳为 0，仍然需要拉取
-          const isDefaultEmpty =
-            localData.categories.length === 1 &&
-            localData.categories[0].id === "default" &&
-            localData.categories[0].sites.length === 0 &&
-            localData.lastModified === 0;
-
-          if (!isDefaultEmpty) {
-            setSites(localData.categories);
-            setLoading(false);
-            return;
+        } else {
+          // 已登录但本地无数据：从 GitHub 拉取
+          try {
+            const githubData = await getDataFromGitHub(currentToken);
+            if (githubData?.categories && githubData.categories.length > 0) {
+              saveSitesToLocalStorage(githubData.categories);
+              setSites(githubData.categories);
+              setLoading(false);
+              return;
+            }
+          } catch (githubError) {
+            console.error("从 GitHub 加载失败:", githubError);
           }
-        }
-
-        // 本地是初始化状态，尝试从 GitHub 拉取
-        try {
-          const githubData = await getDataFromGitHub(currentToken);
-          if (githubData?.categories && githubData.categories.length > 0) {
-            saveSitesToLocalStorage(githubData.categories);
-            setSites(githubData.categories);
-            setLoading(false);
-            return;
-          }
-        } catch (githubError) {
-          console.error("从 GitHub 加载失败:", githubError);
         }
       }
 
-      // 最后：创建默认分类（如果所有拉取都失败）
-      const defaultCategory: Category = {
-        id: "default",
-        name: "默认分类",
-        sort: 0,
-        sites: [],
-      };
-      setSites([defaultCategory]);
-      saveSitesToLocalStorage([defaultCategory]);
+      // 最后：确保有默认分类 + 关闭 loading
+      if (sites.length === 0) {
+        setSites([defaultCategory]);
+        saveSitesToLocalStorage([defaultCategory]);
+      }
       setLoading(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "加载失败");
@@ -194,18 +231,12 @@ export function SitesProvider({ children }: { children: ReactNode }) {
       if (localData.length > 0) {
         setSites(localData);
       } else {
-        const defaultCategory: Category = {
-          id: "default",
-          name: "默认分类",
-          sort: 0,
-          sites: [],
-        };
         setSites([defaultCategory]);
         saveSitesToLocalStorage([defaultCategory]);
       }
       setLoading(false);
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 组件挂载时加载数据
   useEffect(() => {
@@ -215,7 +246,6 @@ export function SitesProvider({ children }: { children: ReactNode }) {
   // 监听认证状态变化，自动刷新数据
   useEffect(() => {
     const handleAuthUpdate = () => {
-      // 认证状态变化，强制刷新数据
       fetchSites(true);
     };
 
@@ -339,31 +369,55 @@ export function SitesProvider({ children }: { children: ReactNode }) {
     await syncToGitHub(true);
   };
 
+  const clearError = useCallback(() => setError(null), []);
+
+  const contextValue = useMemo(
+    () => ({
+      sites,
+      loading,
+      error,
+      clearError,
+      addSite,
+      updateSite,
+      deleteSite,
+      addCategory,
+      updateCategory,
+      deleteCategory,
+      refreshSites: fetchSites,
+      updateSites,
+      syncStatus,
+      syncStep,
+      isOnline,
+      lastSync,
+      manualSync,
+      isGuestMode,
+      authUser,
+    }),
+    [
+      sites,
+      loading,
+      error,
+      clearError,
+      addSite,
+      updateSite,
+      deleteSite,
+      addCategory,
+      updateCategory,
+      deleteCategory,
+      fetchSites,
+      updateSites,
+      syncStatus,
+      syncStep,
+      isOnline,
+      lastSync,
+      manualSync,
+      isGuestMode,
+      authUser,
+    ]
+  );
+
   return (
-    <SitesContext.Provider
-      value={{
-        sites,
-        loading,
-        error,
-        clearError: () => setError(null),
-        addSite,
-        updateSite,
-        deleteSite,
-        addCategory,
-        updateCategory,
-        deleteCategory,
-        refreshSites: fetchSites,
-        updateSites,
-        syncStatus,
-        syncStep,
-        isOnline,
-        lastSync,
-        manualSync,
-        isGuestMode,
-      }}
-    >
-      {children}
-    </SitesContext.Provider>
+    <SitesContext.Provider value={contextValue}>{children}</SitesContext.Provider>
   );
 }
 

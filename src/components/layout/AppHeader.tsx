@@ -9,7 +9,7 @@ import { useSites } from "@/contexts/SitesContext";
 import { SyncStatus } from "@/components/SyncStatus";
 import { Button } from "@/components/ui/button";
 import { LogOut, Github, Star, ChevronDown, Settings, RefreshCw } from "lucide-react";
-import { getAuthState, clearAuth } from "@/lib/auth";
+import { clearAuth } from "@/lib/auth";
 import {
   Dialog,
   DialogContent,
@@ -23,13 +23,9 @@ import { getRuntimePublicConfig, type RuntimePublicConfig } from "@/lib/runtime-
 import Image from "next/image";
 
 export function AppHeader() {
-  const { isOnline, manualSync, syncStep } = useSites();
+  const { isOnline, manualSync, syncStep, authUser } = useSites();
   const { showToast } = useToast();
 
-  const [session, setSession] = useState<{
-    user: { id: string; name: string; avatar: string };
-    token: string;
-  } | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showForkModal, setShowForkModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -49,18 +45,17 @@ export function AppHeader() {
         window.history.replaceState({}, "", window.location.pathname);
       }
 
-      const auth = await getAuthState(true);
+      // runtimeConfig 有内置缓存，不会产生重复网络请求
       const loadedRuntimeConfig = await getRuntimePublicConfig().catch(() => null);
       if (loadedRuntimeConfig) {
         setRuntimeConfig(loadedRuntimeConfig);
         setGithubClientId(loadedRuntimeConfig.githubClientId);
       }
       setRuntimeConfigLoaded(true);
-      if (auth.token && auth.user) {
-        setSession({ user: auth.user, token: auth.token });
-        if (oauthSuccess) {
-          showToast("登录成功", "success");
-        }
+
+      if (oauthSuccess) {
+        // 登录成功事件由 SitesContext 的 auth-update 监听处理
+        showToast("登录成功", "success");
         window.history.replaceState({}, "", window.location.pathname);
         window.dispatchEvent(new Event("auth-update"));
       }
@@ -100,7 +95,7 @@ export function AppHeader() {
     if (confirm("确定要退出登录吗？")) {
       void (async () => {
         await clearAuth();
-        setSession(null);
+        // 触发 auth-update 让 SitesContext 刷新认证状态
         window.dispatchEvent(new Event("auth-update"));
         window.location.reload();
       })();
@@ -108,7 +103,7 @@ export function AppHeader() {
   };
 
   const handleManualSync = async () => {
-    if (!session) {
+    if (!authUser) {
       showToast("请先登录", "warning");
       return;
     }
@@ -216,15 +211,15 @@ export function AppHeader() {
               Star
             </a>
 
-            {session ? (
+            {authUser ? (
               <div className="user-menu-container relative">
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
                   className="flex cursor-pointer items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--background-secondary)] px-2.5 py-1.5 transition-colors hover:border-[var(--primary-300)]"
                 >
                   <Image
-                    src={session.user.avatar}
-                    alt={session.user.name}
+                    src={authUser.avatar}
+                    alt={authUser.name}
                     className="h-7 w-7 rounded-[var(--radius-sm)]"
                     width={28}
                     height={28}
@@ -238,7 +233,7 @@ export function AppHeader() {
                   <div className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--background-secondary)] shadow-[var(--shadow-lg)]">
                     <div className="border-b border-[var(--border)] bg-[var(--muted)]/70 px-4 py-3">
                       <div className="text-sm font-semibold text-[var(--foreground)]">
-                        {session.user.name}
+                        {authUser.name}
                       </div>
                       <div className="mt-0.5 text-xs text-[var(--muted-foreground)]">已登录</div>
                     </div>
@@ -339,18 +334,18 @@ export function AppHeader() {
               <h3 className="text-sm font-semibold text-[var(--foreground-secondary)]">
                 GitHub 账户
               </h3>
-              {session ? (
+              {authUser ? (
                 <div className="space-y-3">
                   <div className="flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--muted)]/45 p-3">
                     <Image
-                      src={session.user.avatar}
-                      alt={session.user.name}
+                      src={authUser.avatar}
+                      alt={authUser.name}
                       className="h-10 w-10 rounded-full"
                       width={40}
                       height={40}
                     />
                     <div className="flex-1">
-                      <div className="font-semibold">{session.user.name}</div>
+                      <div className="font-semibold">{authUser.name}</div>
                       <div className="text-xs text-[var(--muted-foreground)]">已登录</div>
                     </div>
                   </div>
@@ -395,10 +390,10 @@ export function AppHeader() {
                   <div className="text-xs text-[var(--muted-foreground)]">登录状态</div>
                   <div
                     className={
-                      session ? "font-semibold text-success" : "text-[var(--muted-foreground)]"
+                      authUser ? "font-semibold text-success" : "text-[var(--muted-foreground)]"
                     }
                   >
-                    {session ? "已登录" : "未登录"}
+                    {authUser ? "已登录" : "未登录"}
                   </div>
                 </div>
               </div>
@@ -406,7 +401,7 @@ export function AppHeader() {
           </div>
 
           <DialogFooter>
-            {session && (
+            {authUser && (
               <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
                 <Button
                   variant="outline"

@@ -44,7 +44,6 @@ export default function Home() {
     loading,
     error,
     clearError,
-    refreshSites,
     isGuestMode,
     addCategory,
     updateSites,
@@ -241,7 +240,6 @@ export default function Home() {
                     onDelete={() => setDeletingCategory(category.id)}
                     isGuestMode={isGuestMode}
                     allCategories={categories}
-                    onSiteChange={refreshSites}
                     viewMode={viewMode}
                   />
                 ))}

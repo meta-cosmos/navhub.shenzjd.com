@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Trash2, Edit2, GripVertical } from "lucide-react";
 import { IconFolder } from "@/components/icons";
@@ -18,17 +18,15 @@ interface SortableCategoryItemProps {
   onDelete: (id: string) => void;
   isGuestMode: boolean;
   allCategories: Category[];
-  onSiteChange: () => void;
   viewMode: "grid" | "list";
 }
 
-export function SortableCategoryItem({
+export const SortableCategoryItem = memo(function SortableCategoryItem({
   category,
   onEdit,
   onDelete,
   isGuestMode,
   allCategories,
-  onSiteChange,
   viewMode,
 }: SortableCategoryItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -118,10 +116,9 @@ export function SortableCategoryItem({
         <SortableSites
           category={category}
           allCategories={allCategories}
-          onSiteChange={onSiteChange}
           view={viewMode}
         />
       </Suspense>
     </div>
   );
-}
+});

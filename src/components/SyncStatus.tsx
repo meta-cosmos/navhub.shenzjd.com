@@ -9,27 +9,23 @@ import { useSites } from "@/contexts/SitesContext";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
-import { getAuthState } from "@/lib/auth";
 
 export function SyncStatus() {
   const { syncStatus, isOnline, lastSync, manualSync, isGuestMode } = useSites();
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { showToast } = useToast();
 
   useEffect(() => {
-    void (async () => {
-      const auth = await getAuthState(true);
-      setIsLoggedIn(!!auth.token);
-      setMounted(true);
-    })();
+    setMounted(true);
   }, []);
 
   if (!mounted || isGuestMode) {
     return null;
   }
+
+  const isLoggedIn = !isGuestMode;
 
   const formatLastSync = () => {
     if (!lastSync) return "从未同步";

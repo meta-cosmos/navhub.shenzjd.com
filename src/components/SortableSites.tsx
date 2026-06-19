@@ -4,6 +4,7 @@
 
 "use client";
 
+import { memo } from "react";
 import {
   DndContext,
   closestCenter,
@@ -41,7 +42,6 @@ interface SortableSitesProps {
     }>;
   };
   allCategories: Category[];
-  onSiteChange: () => void;
   view?: "grid" | "list";
 }
 
@@ -63,10 +63,9 @@ function SortableItem({ id, children }: { id: string; children: React.ReactNode 
   );
 }
 
-export function SortableSites({
+export const SortableSites = memo(function SortableSites({
   category,
   allCategories,
-  onSiteChange,
   view = "grid",
 }: SortableSitesProps) {
   const { updateSites, isGuestMode } = useSites();
@@ -74,7 +73,7 @@ export function SortableSites({
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 5, // 拖动 5px 后才开始拖拽，避免误触点击
+        distance: 5,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -108,7 +107,6 @@ export function SortableSites({
     );
 
     await updateSites(newCategories);
-    onSiteChange();
   };
 
   // 网格视图布局
@@ -129,7 +127,6 @@ export function SortableSites({
                     url={site.url}
                     favicon={site.favicon}
                     categoryId={category.id}
-                    onSiteChange={onSiteChange}
                     view="grid"
                   />
                 </SortableItem>
@@ -138,7 +135,7 @@ export function SortableSites({
               {/* 添加站点卡片（登录态始终可见） */}
               {!isGuestMode && (
                 <div className="w-[100px] h-[100px] flex-shrink-0">
-                  <AddSiteCard activeCategory={category.id} onSuccess={onSiteChange} view="grid" />
+                  <AddSiteCard activeCategory={category.id} view="grid" />
                 </div>
               )}
             </div>
@@ -165,7 +162,6 @@ export function SortableSites({
                   url={site.url}
                   favicon={site.favicon}
                   categoryId={category.id}
-                  onSiteChange={onSiteChange}
                   view="list"
                 />
               </SortableItem>
@@ -173,11 +169,11 @@ export function SortableSites({
 
             {/* 添加站点卡片（登录态始终可见） */}
             {!isGuestMode && (
-              <AddSiteCard activeCategory={category.id} onSuccess={onSiteChange} view="list" />
+              <AddSiteCard activeCategory={category.id} view="list" />
             )}
           </div>
         </SortableContext>
       </DndContext>
     </div>
   );
-}
+});

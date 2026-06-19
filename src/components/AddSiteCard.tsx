@@ -14,7 +14,7 @@ const AddSiteDialog = lazy(() =>
 
 interface AddSiteCardProps {
   activeCategory: string;
-  onSuccess: () => void;
+  onSuccess?: () => void;
   view?: "grid" | "list";
 }
 

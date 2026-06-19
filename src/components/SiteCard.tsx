@@ -268,7 +268,6 @@ export const SiteCard = memo(function SiteCard({
           <button
             data-menu-trigger
             onClick={handleMenuToggle}
-            onMouseEnter={() => setIsHovered(true)}
             className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] transition-colors hover:bg-[var(--muted)] cursor-pointer"
             aria-label="更多操作"
           >

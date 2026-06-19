@@ -182,12 +182,12 @@ export const SiteCard = memo(function SiteCard({
           className="site-card group cursor-pointer bg-[var(--background-secondary)]/85"
           title="点击打开链接"
         >
-          {/* 三点菜单按钮 — 悬停显示 */}
-          <div className="absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* 三点菜单按钮 — 始终可见，悬停高亮 */}
+          <div className="absolute top-1 right-1 z-10">
             <button
               data-menu-trigger
               onClick={handleMenuToggle}
-              className="p-1 rounded-full hover:bg-[var(--muted)] transition-colors cursor-pointer"
+              className="p-1 rounded-full bg-[var(--background-secondary)]/80 hover:bg-[var(--muted)] transition-colors cursor-pointer"
               aria-label="更多操作"
             >
               <MoreVertical className="w-4 h-4 text-[var(--foreground-secondary)]" />
@@ -252,8 +252,8 @@ export const SiteCard = memo(function SiteCard({
           </div>
         </div>
 
-        {/* 三点菜单按钮 — 悬停显示 */}
-        <div className="relative opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+        {/* 三点菜单按钮 — 始终可见，悬停高亮 */}
+        <div className="relative flex-shrink-0">
           <button
             data-menu-trigger
             onClick={handleMenuToggle}

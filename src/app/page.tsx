@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { SortableCategoryItem } from "@/components/SortableCategoryItem";
+import { CategorySidebar } from "@/components/CategorySidebar";
 import type { Category } from "@/lib/storage/local-storage";
 
 import {
@@ -165,6 +166,12 @@ export default function Home() {
   return (
     <AppLayout>
       <PageContainer>
+        <div className="flex gap-6 w-full">
+          {/* 左侧分类导航 */}
+          <CategorySidebar categories={categories} />
+
+          {/* 主内容区 */}
+          <div className="flex-1 min-w-0">
         <div className="flex flex-col gap-4 mb-6 w-full">
           <div className="flex gap-3 items-center w-full flex-wrap">
             <div className="flex-1 min-w-0 flex-grow">
@@ -275,6 +282,8 @@ export default function Home() {
             </div>
           </div>
         )}
+          </div>
+        </div>
       </PageContainer>
 
       {showAddCategoryDialog && (

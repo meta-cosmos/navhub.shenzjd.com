@@ -94,15 +94,18 @@ export const SiteCard = memo(function SiteCard({
     };
   }, []);
 
-  // 阻止浏览器默认右键菜单（仅阻止浏览器菜单，自定义菜单由 onContextMenuCapture 处理）
+  // 右键菜单：用原生监听器统一处理（阻止浏览器默认菜单 + 打开自定义菜单）
+  // 不用 React onContextMenuCapture，避免 React 19 事件委托冲突
   useEffect(() => {
     const el = cardRef.current;
     if (!el || isGuestMode) return;
-    const handleNativeContextMenu = (e: MouseEvent) => {
+    const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault();
+      e.stopPropagation();
+      setIsContextMenuOpen(true);
     };
-    el.addEventListener("contextmenu", handleNativeContextMenu);
-    return () => el.removeEventListener("contextmenu", handleNativeContextMenu);
+    el.addEventListener("contextmenu", handleContextMenu);
+    return () => el.removeEventListener("contextmenu", handleContextMenu);
   }, [isGuestMode]);
 
   const domain = useMemo(() => {
@@ -140,13 +143,6 @@ export const SiteCard = memo(function SiteCard({
   const handleSecondaryPointerCapture = (e: React.MouseEvent | React.PointerEvent) => {
     if (e.button !== 2) return;
     e.stopPropagation();
-  };
-
-  const handleContextMenuCapture = (e: React.MouseEvent) => {
-    if (isGuestMode) return;
-    e.preventDefault();
-    e.stopPropagation();
-    setIsContextMenuOpen(true);
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -326,7 +322,6 @@ export const SiteCard = memo(function SiteCard({
 
   const cardEvents = {
     onClick: handleCardClick,
-    onContextMenuCapture: handleContextMenuCapture,
     onPointerDownCapture: handleSecondaryPointerCapture,
     onMouseDownCapture: handleSecondaryPointerCapture,
     onTouchStart: handleTouchStart,

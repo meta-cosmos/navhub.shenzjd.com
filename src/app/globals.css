@@ -272,7 +272,7 @@
 
   /* 分类卡片:扁平分组容器 — 轻量边框 + 极弱阴影,内容呼吸感优先 */
   .category-card {
-    @apply overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--background-secondary)] p-4;
+    @apply rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--background-secondary)] p-4;
     box-shadow: var(--shadow-xs);
     transition:
       box-shadow 0.2s ease,

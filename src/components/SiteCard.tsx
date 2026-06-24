@@ -47,7 +47,9 @@ export const SiteCard = memo(function SiteCard({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const menuBtnRef = useRef<HTMLButtonElement>(null);
   const [menuPosition, setMenuPosition] = useState<"auto" | "flip-up">("auto");
+  const [menuPos, setMenuPos] = useState({ x: 0, y: 0 });
 
   // 点击外部关闭菜单
   useEffect(() => {
@@ -63,11 +65,14 @@ export const SiteCard = memo(function SiteCard({
 
   // 计算菜单位置（防止超出视口）
   useEffect(() => {
-    if (!isMenuOpen || !menuRef.current) return;
+    if (!isMenuOpen || !menuRef.current || !menuBtnRef.current) return;
+    const btnRect = menuBtnRef.current.getBoundingClientRect();
+    setMenuPos({ x: btnRect.right - 140, y: btnRect.bottom + 4 });
     const menuRect = menuRef.current.getBoundingClientRect();
     const vh = window.innerHeight;
     if (menuRect.bottom > vh && menuRect.height < vh) {
       setMenuPosition("flip-up");
+      setMenuPos({ x: btnRect.right - 140, y: btnRect.top - 4 });
     }
   }, [isMenuOpen]);
 
@@ -123,11 +128,15 @@ export const SiteCard = memo(function SiteCard({
       role="menu"
       aria-label="站点操作菜单"
       className={cn(
-        "absolute z-[70] w-36 overflow-hidden",
-        menuPosition === "flip-up" ? "bottom-full mb-1 left-0" : "top-full mt-1 left-0",
+        "fixed z-[9999] w-36 overflow-hidden",
         "border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--background-secondary)]",
         "shadow-[var(--shadow-lg)] py-1"
       )}
+      style={{
+        top: menuPosition === "flip-up" ? undefined : menuPos.y,
+        bottom: menuPosition === "flip-up" ? `calc(100vh - ${menuPos.y})` : undefined,
+        left: menuPos.x,
+      }}
     >
       <button
         role="menuitem"
@@ -192,6 +201,7 @@ export const SiteCard = memo(function SiteCard({
           >
             <button
               data-menu-trigger
+              ref={menuBtnRef}
               onClick={handleMenuToggle}
               className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--background)]/80 backdrop-blur-sm border border-[var(--border)] transition-colors hover:bg-[var(--background-secondary)] hover:border-[var(--border-strong)] cursor-pointer shadow-[var(--shadow-xs)]"
               aria-label="更多操作"
@@ -280,6 +290,7 @@ export const SiteCard = memo(function SiteCard({
         >
           <button
             data-menu-trigger
+            ref={menuBtnRef}
             onClick={handleMenuToggle}
             className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--background-secondary)] transition-colors hover:bg-[var(--muted)] hover:border-[var(--border-strong)] cursor-pointer"
             aria-label="更多操作"

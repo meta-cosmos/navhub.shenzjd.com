@@ -39,15 +39,6 @@ export const SortableCategoryItem = memo(function SortableCategoryItem({
     opacity: isDragging ? 0.8 : 1,
   };
 
-  const handleCategoryClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    const element = document.getElementById(`category-${category.id}`);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
-      window.history.pushState(null, "", `#category-${category.id}`);
-    }
-  };
-
   return (
     <div
       ref={setNodeRef}
@@ -66,9 +57,7 @@ export const SortableCategoryItem = memo(function SortableCategoryItem({
           </div>
           <div className="flex-1">
             <h3
-              className="font-semibold text-lg tracking-tight text-[var(--foreground)] flex items-center gap-2 cursor-pointer"
-              onClick={handleCategoryClick}
-              title="点击跳转到此分类"
+              className="font-semibold text-lg tracking-tight text-[var(--foreground)] flex items-center gap-2"
             >
               <IconFolder className="w-5 h-5 text-[var(--primary-600)]" />
               <span>{category.name}</span>

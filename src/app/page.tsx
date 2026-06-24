@@ -21,6 +21,7 @@ import {
 import { IconSearch, IconBook } from "@/components/icons";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { OverviewBar } from "@/components/OverviewBar";
 import { SearchBar, SearchStatus } from "@/components/SearchBar";
 import { CategoryTabBar } from "@/components/CategoryTabBar";
 import { ImportExportDialog } from "@/components/ImportExportDialog";
@@ -197,11 +198,14 @@ export default function Home() {
   return (
     <AppLayout>
       <PageContainer>
-        {/* 操作栏:sticky 吸顶,包含分类 tab 和搜索 */}
-        <div className="sticky top-16 z-[40] mb-5 space-y-3">
-          {/* 分类 tab 栏(WeTab 风格,桌面+移动端统一) */}
-          <CategoryTabBar categories={categories} />
+        {/* 首屏概览区 */}
+        <OverviewBar categories={categories} />
 
+        {/* 分类导航 tab 栏(WeTab 风格,桌面+移动端统一) */}
+        <CategoryTabBar categories={categories} />
+
+        {/* 操作栏:sticky 吸顶,包含搜索和操作按钮 */}
+        <div className="sticky top-16 z-[40] mb-5 space-y-3">
           {/* 搜索和操作栏 */}
           <div className="rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--background-secondary)] p-2 shadow-[var(--shadow-sm)]">
             <div className="flex items-center gap-2">

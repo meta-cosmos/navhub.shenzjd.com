@@ -36,8 +36,8 @@ export function CategorySidebar({ categories }: CategorySidebarProps) {
   const handleClick = useCallback((categoryId: string) => {
     const el = document.getElementById(`category-${categoryId}`);
     if (el) {
-      // sticky 操作栏高度约 120px (top-16 = 64px + 操作栏内容)
-      const stickyOffset = 130;
+      // sticky 顶栏高度约 50px
+      const stickyOffset = 60;
       const y = el.getBoundingClientRect().top + window.scrollY - stickyOffset;
       window.scrollTo({ top: y, behavior: "smooth" });
     }

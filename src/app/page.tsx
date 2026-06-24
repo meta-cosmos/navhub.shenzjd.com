@@ -21,7 +21,6 @@ import {
 import { IconSearch, IconBook } from "@/components/icons";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageContainer } from "@/components/layout/PageContainer";
-import { OverviewBar } from "@/components/OverviewBar";
 import { SearchBar, SearchStatus } from "@/components/SearchBar";
 import { CategoryTabBar } from "@/components/CategoryTabBar";
 import { ImportExportDialog } from "@/components/ImportExportDialog";
@@ -198,41 +197,39 @@ export default function Home() {
   return (
     <AppLayout>
       <PageContainer>
-        {/* 首屏概览区 */}
-        <OverviewBar categories={categories} />
+        {/* 顶栏:sticky 吸顶,左侧分类 tab + 右侧搜索和操作按钮 */}
+        <div className="sticky top-16 z-[40] mb-4 flex items-center gap-3">
+          {/* 分类导航 */}
+          <CategoryTabBar categories={categories} />
 
-        {/* 分类导航 tab 栏(WeTab 风格,桌面+移动端统一) */}
-        <CategoryTabBar categories={categories} />
+          {/* 右侧操作区 */}
+          <div className="flex flex-shrink-0 items-center gap-2 ml-auto">
+            {/* 搜索框 */}
+            <div className="relative w-48 sm:w-64">
+              <SearchBar onSearch={setSearchQuery} placeholder="搜索..." />
+            </div>
 
-        {/* 操作栏:sticky 吸顶,包含搜索和操作按钮 */}
-        <div className="sticky top-16 z-[40] space-y-3">
-          {/* 搜索和操作栏 */}
-          <div className="rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--background-secondary)] p-2 shadow-[var(--shadow-sm)]">
-            <div className="flex items-center gap-2">
-              <div className="min-w-0 flex-1">
-                <SearchBar onSearch={setSearchQuery} placeholder="搜索站点名称、URL..." />
-              </div>
-              {!isGuestMode && (
-                <Button
-                  size="sm"
-                  onClick={() => setShowAddCategoryDialog(true)}
-                  className="h-11 flex-shrink-0 gap-1"
-                  title="新建分类 (Ctrl/Cmd+Alt+N)"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span className="hidden sm:inline">新建</span>
-                </Button>
-              )}
+            {!isGuestMode && (
+              <Button
+                size="sm"
+                onClick={() => setShowAddCategoryDialog(true)}
+                className="h-9 flex-shrink-0 gap-1"
+                title="新建分类 (Ctrl/Cmd+Alt+N)"
+              >
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">新建</span>
+              </Button>
+            )}
 
-              <div className="relative flex-shrink-0" ref={moreRef}>
-                <button
-                  onClick={() => setMoreMenuOpen(!moreMenuOpen)}
-                  className={moreButtonClass}
-                  aria-label="更多操作"
-                  aria-expanded={moreMenuOpen}
-                >
-                  <MoreVertical className="h-4 w-4" />
-                </button>
+            <div className="relative flex-shrink-0" ref={moreRef}>
+              <button
+                onClick={() => setMoreMenuOpen(!moreMenuOpen)}
+                className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] transition-colors hover:bg-[var(--muted)] cursor-pointer"
+                aria-label="更多操作"
+                aria-expanded={moreMenuOpen}
+              >
+                <MoreVertical className="h-4 w-4 text-[var(--foreground-secondary)]" />
+              </button>
                 {moreMenuOpen && (
                   <div
                     role="menu"
@@ -282,12 +279,9 @@ export default function Home() {
                 )}
               </div>
             </div>
-          </div>
 
           {searchQuery && (
-            <div className="mt-2">
-              <SearchStatus query={searchQuery} resultsCount={searchResultsCount} />
-            </div>
+            <SearchStatus query={searchQuery} resultsCount={searchResultsCount} />
           )}
         </div>
 

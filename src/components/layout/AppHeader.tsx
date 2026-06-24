@@ -1,5 +1,6 @@
 /**
- * 应用头部组件
+ * 应用头部组件（重构版）
+ * 拆分为多个子组件，职责清晰
  */
 
 "use client";
@@ -8,38 +9,37 @@ import { useState, useEffect } from "react";
 import { useSites } from "@/contexts/SitesContext";
 import { SyncStatus } from "@/components/SyncStatus";
 import { Button } from "@/components/ui/button";
-import { LogOut, Github, Star, ChevronDown, Settings, RefreshCw } from "lucide-react";
+import { Github, Star } from "lucide-react";
 import { clearAuth } from "@/lib/auth";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
 import { getRuntimePublicConfig, type RuntimePublicConfig } from "@/lib/runtime-public-config";
-import Image from "next/image";
+
+// 子组件
+import { SyncProgressBar } from "./AppHeader/SyncProgressBar";
+import { OfflineBanner } from "./AppHeader/OfflineBanner";
+import { UserMenu } from "./AppHeader/UserMenu";
+import { ForkConfirmDialog } from "./AppHeader/ForkConfirmDialog";
+import { SettingsDialog } from "./AppHeader/SettingsDialog";
 
 export function AppHeader() {
-  const { isOnline, manualSync, syncStep, authUser } = useSites();
+  const { isOnline, manualSync, syncStep, authUser, isGuestMode } = useSites();
   const { showToast } = useToast();
 
-  const [showUserMenu, setShowUserMenu] = useState(false);
+  // 状态管理
   const [showForkModal, setShowForkModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [githubClientId, setGithubClientId] = useState("");
   const [runtimeConfigLoaded, setRuntimeConfigLoaded] = useState(false);
   const [runtimeConfig, setRuntimeConfig] = useState<RuntimePublicConfig | null>(null);
-  // mounted 保护:isOnline / syncStep 依赖客户端状态(navigator),SSR 与 CSR 首次渲染可能不一致,
-  // 这些 conditional 在挂载后才渲染,避免 hydration mismatch。
+
+  // mounted 保护: 避免 SSR hydration mismatch
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  // 初始化运行时配置
   useEffect(() => {
     void (async () => {
       const params = new URLSearchParams(window.location.search);
@@ -51,7 +51,6 @@ export function AppHeader() {
         window.history.replaceState({}, "", window.location.pathname);
       }
 
-      // runtimeConfig 有内置缓存，不会产生重复网络请求
       const loadedRuntimeConfig = await getRuntimePublicConfig().catch(() => null);
       if (loadedRuntimeConfig) {
         setRuntimeConfig(loadedRuntimeConfig);
@@ -60,7 +59,6 @@ export function AppHeader() {
       setRuntimeConfigLoaded(true);
 
       if (oauthSuccess) {
-        // 登录成功事件由 SitesContext 的 auth-update 监听处理
         showToast("登录成功", "success");
         window.history.replaceState({}, "", window.location.pathname);
         window.dispatchEvent(new Event("auth-update"));
@@ -68,6 +66,14 @@ export function AppHeader() {
     })();
   }, [showToast]);
 
+  // 监听 open-settings 事件
+  useEffect(() => {
+    const handleOpenSettings = () => setShowSettingsModal(true);
+    window.addEventListener("open-settings", handleOpenSettings);
+    return () => window.removeEventListener("open-settings", handleOpenSettings);
+  }, []);
+
+  // 登录处理
   const handleGitHubLogin = async () => {
     let clientId = githubClientId;
     if (!clientId) {
@@ -92,24 +98,20 @@ export function AppHeader() {
     setShowForkModal(true);
   };
 
-  const confirmForkAndLogin = () => {
-    setShowForkModal(false);
-    window.location.href = "/api/auth/github/login";
-  };
-
+  // 退出登录处理
   const handleGitHubLogout = () => {
     if (confirm("确定要退出登录吗？")) {
       void (async () => {
         await clearAuth();
-        // 触发 auth-update 让 SitesContext 刷新认证状态
         window.dispatchEvent(new Event("auth-update"));
         window.location.reload();
       })();
     }
   };
 
+  // 手动同步处理
   const handleManualSync = async () => {
-    if (!authUser) {
+    if (isGuestMode || !authUser) {
       showToast("请先登录", "warning");
       return;
     }
@@ -134,66 +136,21 @@ export function AppHeader() {
     }
   };
 
-  useEffect(() => {
-    if (!showUserMenu) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest(".user-menu-container")) {
-        setShowUserMenu(false);
-      }
-    };
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
-  }, [showUserMenu]);
-
-  useEffect(() => {
-    const handleOpenSettings = () => {
-      setShowSettingsModal(true);
-    };
-
-    window.addEventListener("open-settings", handleOpenSettings);
-    return () => window.removeEventListener("open-settings", handleOpenSettings);
-  }, []);
-
   return (
     <>
-      {mounted && syncStep && (
-        <div className="fixed left-0 right-0 top-0 z-50 border-b border-[var(--border)] bg-[var(--background-secondary)]/95 px-4 py-3 backdrop-blur-md">
-          <div className="mx-auto max-w-[1200px]">
-            <div className="flex items-center gap-3">
-              <RefreshCw className="h-5 w-5 animate-spin text-[var(--primary-600)]" />
-              <div className="flex-1">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-[var(--foreground)]">
-                    {syncStep.label}
-                  </span>
-                  <span className="text-xs text-[var(--muted-foreground)]">
-                    {syncStep.progress}%
-                  </span>
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-[var(--muted)]">
-                  <div
-                    className="h-full bg-gradient-to-r from-[var(--primary-500)] to-[var(--accent-500)] transition-all duration-300"
-                    style={{ width: `${syncStep.progress}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 同步进度条 */}
+      <SyncProgressBar step={syncStep} mounted={mounted} />
 
-      {mounted && !isOnline && (
-        <div className="border-b border-warning/35 bg-warning/12 px-4 py-2 text-center text-sm text-[var(--foreground-secondary)]">
-          ⚠️ 当前处于离线状态，数据将保存到本地，恢复网络后自动同步
-        </div>
-      )}
+      {/* 离线提示 */}
+      <OfflineBanner isOnline={isOnline} mounted={mounted} />
 
+      {/* 主导航栏 */}
       <header
-        className="glass sticky top-0 z-40 w-full border-b border-[var(--border)]"
+        className="glass sticky top-0 z-[45] w-full border-b border-[var(--border)]"
         style={{ marginTop: mounted && syncStep ? "60px" : "0px" }}
       >
         <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-4 md:px-6">
+          {/* Logo */}
           <div
             className="flex cursor-pointer items-center gap-3"
             onClick={() => (window.location.href = "/")}
@@ -204,9 +161,11 @@ export function AppHeader() {
             <h1 className="text-xl font-extrabold tracking-tight text-gradient">NavHub</h1>
           </div>
 
+          {/* 右侧操作区 */}
           <div className="flex items-center gap-2">
             <SyncStatus />
 
+            {/* GitHub Star 按钮 */}
             <a
               href={`https://github.com/${runtimeConfig?.githubOwner || "wu529778790"}/${runtimeConfig?.githubRepo || "navhub.shenzjd.com"}`}
               target="_blank"
@@ -217,58 +176,18 @@ export function AppHeader() {
               Star
             </a>
 
+            {/* 用户菜单或登录按钮 */}
             {authUser ? (
-              <div className="user-menu-container relative">
-                <button
-                  onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="flex cursor-pointer items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--background-secondary)] px-2.5 py-1.5 transition-colors hover:border-[var(--primary-300)]"
-                >
-                  <Image
-                    src={authUser.avatar}
-                    alt={authUser.name}
-                    className="h-7 w-7 rounded-[var(--radius-sm)]"
-                    width={28}
-                    height={28}
-                  />
-                  <ChevronDown
-                    className={`h-4 w-4 text-[var(--foreground-secondary)] transition-transform ${showUserMenu ? "rotate-180" : ""}`}
-                  />
-                </button>
-
-                {showUserMenu && (
-                  <div className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--background-secondary)] shadow-[var(--shadow-lg)]">
-                    <div className="border-b border-[var(--border)] bg-[var(--muted)]/70 px-4 py-3">
-                      <div className="text-sm font-semibold text-[var(--foreground)]">
-                        {authUser.name}
-                      </div>
-                      <div className="mt-0.5 text-xs text-[var(--muted-foreground)]">已登录</div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setShowSettingsModal(true);
-                        setShowUserMenu(false);
-                      }}
-                      className="flex w-full cursor-pointer items-center gap-2 px-4 py-2.5 text-left text-sm text-[var(--foreground-secondary)] transition-colors hover:bg-[var(--muted)]"
-                    >
-                      <Settings className="h-4 w-4" />
-                      设置
-                    </button>
-                    <button
-                      onClick={handleGitHubLogout}
-                      className="flex w-full cursor-pointer items-center gap-2 px-4 py-2.5 text-left text-sm text-[var(--error)] transition-colors hover:bg-[var(--error)]/10"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      退出登录
-                    </button>
-                  </div>
-                )}
-              </div>
+              <UserMenu
+                authUser={authUser}
+                onOpenSettings={() => setShowSettingsModal(true)}
+                onLogout={handleGitHubLogout}
+                runtimeConfig={runtimeConfig}
+              />
             ) : (
               <Button
                 size="sm"
-                onClick={() => {
-                  void handleGitHubLogin();
-                }}
+                onClick={() => void handleGitHubLogin()}
                 disabled={!runtimeConfigLoaded && !githubClientId}
                 className="gap-2 shadow-md transition-all hover:shadow-lg"
               >
@@ -280,158 +199,28 @@ export function AppHeader() {
         </div>
       </header>
 
-      {showForkModal && (
-        <div className="fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
-          <div className="card scale-in w-full max-w-md p-6">
-            <div className="mb-4 flex items-center gap-3">
-              <Github className="h-6 w-6 text-[var(--primary-700)]" />
-              <h3 className="text-lg font-bold">登录确认</h3>
-            </div>
-            <div className="mb-6 space-y-3 text-sm text-[var(--foreground-secondary)]">
-              <p>
-                登录后，系统会自动 Fork 仓库
-                <code className="ml-1 rounded bg-[var(--muted)] px-2 py-0.5">
-                  {runtimeConfig?.githubOwner || "wu529778790"}/
-                  {runtimeConfig?.githubRepo || "navhub.shenzjd.com"}
-                </code>
-                到你的 GitHub 账户。
-              </p>
-              <p>数据将存放在你的仓库中：</p>
-              <ul className="ml-4 list-inside list-disc space-y-1">
-                <li>
-                  文件路径:{" "}
-                  <code className="rounded bg-[var(--muted)] px-2 py-0.5">
-                    {runtimeConfig?.dataFilePath || "data/sites.json"}
-                  </code>
-                </li>
-                <li>
-                  仓库名称:{" "}
-                  <code className="rounded bg-[var(--muted)] px-2 py-0.5">
-                    {runtimeConfig?.githubRepo || "navhub.shenzjd.com"}
-                  </code>
-                </li>
-              </ul>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowForkModal(false)}
-                className="cursor-pointer"
-              >
-                取消
-              </Button>
-              <Button onClick={confirmForkAndLogin} className="cursor-pointer">
-                继续登录
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Fork 确认弹窗 */}
+      <ForkConfirmDialog
+        open={showForkModal}
+        onClose={() => setShowForkModal(false)}
+        onConfirm={() => {
+          setShowForkModal(false);
+          window.location.href = "/api/auth/github/login";
+        }}
+        runtimeConfig={runtimeConfig}
+      />
 
-      <Dialog open={showSettingsModal} onOpenChange={setShowSettingsModal}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>设置</DialogTitle>
-            <DialogDescription>管理账户和同步选项</DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-6 py-4">
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-[var(--foreground-secondary)]">
-                GitHub 账户
-              </h3>
-              {authUser ? (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--muted)]/45 p-3">
-                    <Image
-                      src={authUser.avatar}
-                      alt={authUser.name}
-                      className="h-10 w-10 rounded-full"
-                      width={40}
-                      height={40}
-                    />
-                    <div className="flex-1">
-                      <div className="font-semibold">{authUser.name}</div>
-                      <div className="text-xs text-[var(--muted-foreground)]">已登录</div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1 text-xs text-[var(--muted-foreground)]">
-                    <div>• 数据自动同步到你的 GitHub 仓库</div>
-                    <div>
-                      • 仓库:{" "}
-                      <code className="rounded bg-[var(--muted)] px-1.5 py-0.5">
-                        {runtimeConfig?.githubRepo || "navhub.shenzjd.com"}
-                      </code>
-                    </div>
-                    <div>
-                      • 文件:{" "}
-                      <code className="rounded bg-[var(--muted)] px-1.5 py-0.5">
-                        {runtimeConfig?.dataFilePath || "data/sites.json"}
-                      </code>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-sm text-[var(--muted-foreground)]">
-                  未登录，当前为访客模式（只读示例数据）
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-[var(--foreground-secondary)]">同步状态</h3>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="rounded-lg border border-[var(--border)] bg-[var(--muted)]/45 p-2">
-                  <div className="text-xs text-[var(--muted-foreground)]">网络状态</div>
-                  <div
-                    className={
-                      isOnline ? "font-semibold text-success" : "font-semibold text-warning"
-                    }
-                  >
-                    {isOnline ? "在线" : "离线"}
-                  </div>
-                </div>
-                <div className="rounded-lg border border-[var(--border)] bg-[var(--muted)]/45 p-2">
-                  <div className="text-xs text-[var(--muted-foreground)]">登录状态</div>
-                  <div
-                    className={
-                      authUser ? "font-semibold text-success" : "text-[var(--muted-foreground)]"
-                    }
-                  >
-                    {authUser ? "已登录" : "未登录"}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            {authUser && (
-              <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
-                <Button
-                  variant="outline"
-                  onClick={handleManualSync}
-                  disabled={isSyncing}
-                  className="h-12 flex-1 cursor-pointer gap-1 text-base font-medium sm:flex-none"
-                >
-                  <RefreshCw className={`h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
-                  {isSyncing ? "同步中..." : "手动同步"}
-                </Button>
-
-                <Button
-                  variant="destructive"
-                  onClick={handleGitHubLogout}
-                  className="h-12 flex-1 cursor-pointer gap-1 text-base font-medium sm:flex-none"
-                >
-                  <LogOut className="h-4 w-4" />
-                  退出登录
-                </Button>
-              </div>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* 设置对话框 */}
+      <SettingsDialog
+        open={showSettingsModal}
+        onOpenChange={setShowSettingsModal}
+        authUser={authUser}
+        isOnline={isOnline}
+        isSyncing={isSyncing}
+        onManualSync={handleManualSync}
+        onLogout={handleGitHubLogout}
+        runtimeConfig={runtimeConfig}
+      />
     </>
   );
 }

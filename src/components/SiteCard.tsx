@@ -121,7 +121,7 @@ export const SiteCard = memo(function SiteCard({
       role="menu"
       aria-label="站点操作菜单"
       className={cn(
-        "absolute z-[9999] w-36 overflow-hidden",
+        "absolute z-[70] w-36 overflow-hidden",
         menuPosition === "flip-up" ? "bottom-full mb-1 left-0" : "top-full mt-1 left-0",
         "border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--background-secondary)]",
         "shadow-[var(--shadow-lg)] py-1"
@@ -177,7 +177,7 @@ export const SiteCard = memo(function SiteCard({
           role="button"
           tabIndex={0}
           onClick={handleCardClick}
-          className={cn("site-card group/card cursor-pointer", isMenuOpen && "z-[9999] relative")}
+          className={cn("site-card group/card cursor-pointer", isMenuOpen && "z-[60] relative")}
           title="点击打开链接"
         >
           {/* 三点菜单按钮 — 仅 hover 当前卡片时显示 */}
@@ -232,10 +232,18 @@ export const SiteCard = memo(function SiteCard({
   return (
     <>
       <div
+        role="button"
+        tabIndex={0}
         onClick={handleCardClick}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleCardClick(e as unknown as React.MouseEvent);
+          }
+        }}
         className={cn(
           "relative flex items-center gap-3 p-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--background-secondary)] transition-all duration-200 hover:border-[var(--primary-300)] hover:shadow-[var(--shadow-md)] cursor-pointer group/card",
-          isMenuOpen && "z-[9999]"
+          isMenuOpen && "z-[60]"
         )}
         title="点击打开链接"
       >

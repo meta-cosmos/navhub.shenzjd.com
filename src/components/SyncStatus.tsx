@@ -27,17 +27,16 @@ export function SyncStatus() {
 
   const isLoggedIn = !isGuestMode;
 
-  const formatLastSync = () => {
-    if (!lastSync) return "从未同步";
+  const formatLastSync = (lastSyncTime: Date) => {
     const now = new Date();
-    const diff = now.getTime() - lastSync.getTime();
+    const diff = now.getTime() - lastSyncTime.getTime();
     const minutes = Math.floor(diff / 60000);
 
     if (minutes < 1) return "刚刚同步";
     if (minutes < 60) return `${minutes}分钟前同步`;
     const hours = Math.floor(minutes / 60);
     if (hours < 24) return `${hours}小时前同步`;
-    return lastSync.toLocaleDateString();
+    return lastSyncTime.toLocaleDateString();
   };
 
   const getStatusText = () => {
@@ -93,7 +92,7 @@ export function SyncStatus() {
           className={`inline-block h-2.5 w-2.5 rounded-full ${isOnline ? "bg-[var(--success)]" : "bg-[var(--warning)]"}`}
         />
         <span className="font-semibold">{getStatusText()}</span>
-        {lastSync && <span className="text-[var(--muted-foreground)]">{formatLastSync()}</span>}
+        {lastSync && <span className="text-[var(--muted-foreground)]">{formatLastSync(lastSync)}</span>}
         {syncMessage && (
           <span className="hidden text-[var(--primary-600)] lg:inline">({syncMessage})</span>
         )}

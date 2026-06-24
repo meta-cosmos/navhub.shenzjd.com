@@ -11,8 +11,34 @@ import { UpdateBanner } from "@/components/UpdateBanner";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "NavHub",
-  description: "NavHub - 个人导航网站，支持本地存储和 GitHub 同步",
+  title: {
+    default: "NavHub - 个人导航网站",
+    template: "%s | NavHub",
+  },
+  description:
+    "NavHub 是一个现代化的个人导航书签管理工具，支持本地存储和 GitHub 同步，让你随时随地访问常用网站。",
+  keywords: ["导航", "书签", "收藏夹", "个人导航", "NavHub", "bookmark", "navigation"],
+  authors: [{ name: "NavHub" }],
+  creator: "NavHub",
+  metadataBase: new URL("https://navhub.shenzjd.com"),
+  openGraph: {
+    type: "website",
+    locale: "zh_CN",
+    url: "https://navhub.shenzjd.com",
+    siteName: "NavHub",
+    title: "NavHub - 个人导航网站",
+    description:
+      "现代化的个人导航书签管理工具，支持本地存储和 GitHub 同步。",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "NavHub - 个人导航网站",
+    description: "现代化的个人导航书签管理工具，支持本地存储和 GitHub 同步。",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({

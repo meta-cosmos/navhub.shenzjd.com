@@ -83,20 +83,20 @@ export function useServiceWorker(): UseServiceWorkerReturn {
 
     // 注册 Service Worker
     const registerSW = async () => {
+      let updateInterval: ReturnType<typeof setInterval> | undefined;
+
       try {
         const registration = await navigator.serviceWorker.register("/sw.js", {
-          updateViaCache: "imports", // 优化：仅通过缓存导入的资源
+          updateViaCache: "imports",
         });
 
         registrationRef.current = registration;
 
-        // 检查是否有等待中的 Service Worker
         if (registration.waiting) {
           setUpdateAvailable(true);
           setUpdateStatus("available");
         }
 
-        // 监听新的 Service Worker 安装
         registration.addEventListener("updatefound", () => {
           const newWorker = registration.installing;
           if (!newWorker) return;
@@ -113,20 +113,16 @@ export function useServiceWorker(): UseServiceWorkerReturn {
           });
         });
 
-        // 定期检查更新（每 30 分钟）
-        const updateInterval = setInterval(
-          () => {
-            checkForUpdates();
-          },
-          30 * 60 * 1000
-        );
-
-        return () => {
-          clearInterval(updateInterval);
-        };
+        updateInterval = setInterval(() => {
+          checkForUpdates();
+        }, 30 * 60 * 1000);
       } catch (error) {
         console.error("[SW] Service Worker registration failed:", error);
       }
+
+      return () => {
+        if (updateInterval) clearInterval(updateInterval);
+      };
     };
 
     // 等待页面加载完成后注册

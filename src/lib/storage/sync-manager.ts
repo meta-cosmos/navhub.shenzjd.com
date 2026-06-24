@@ -1,6 +1,10 @@
 /**
  * 同步管理器
  * 管理本地存储和 GitHub 之间的同步
+ *
+ * 冲突检测优化：
+ * 1. 使用内容指纹（而非仅时间戳）作为主要判断依据
+ * 2. 引入版本号概念，避免毫秒级时间戳碰撞问题
  */
 
 import {
@@ -9,10 +13,75 @@ import {
   setLastSyncTime,
   getDataFingerprint,
   getLastSyncedFingerprint,
-  type NavData,
 } from "./local-storage";
 import { saveDataToGitHub, getDataFromGitHub } from "./github-storage";
 import { STORAGE_CONFIG, SYNC_CONFIG } from "@/lib/config";
+import type { NavData, SyncResult, SyncStep, SyncStepInfo } from "@/types";
+import { SyncStatus } from "@/types";
+
+/** 版本号存储 key */
+const VERSION_KEY = "nav_data_version";
+
+/**
+ * 获取当前数据版本号（递增整数）
+ * 每次数据变更时递增，用于精确的冲突检测
+ */
+export function getDataVersion(): number {
+  try {
+    const version = localStorage.getItem(VERSION_KEY);
+    return version ? parseInt(version, 10) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * 递增并保存版本号
+ * @returns 新的版本号
+ */
+export function incrementDataVersion(): number {
+  const newVersion = getDataVersion() + 1;
+  try {
+    localStorage.setItem(VERSION_KEY, String(newVersion));
+  } catch {
+    // 忽略写入错误
+  }
+  return newVersion;
+}
+
+/** 同步时记录的版本信息 */
+interface VersionRecord {
+  /** 本地版本号 */
+  localVersion: number;
+  /** 远程版本号（从 GitHub 数据中读取） */
+  remoteVersion: number;
+}
+
+const LAST_SYNC_VERSION_KEY = "nav_last_sync_version";
+
+/**
+ * 获取上次同步时的版本记录
+ */
+export function getLastSyncVersion(): VersionRecord | null {
+  try {
+    const raw = localStorage.getItem(LAST_SYNC_VERSION_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as VersionRecord;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 保存同步版本记录
+ */
+export function saveSyncVersion(record: VersionRecord): void {
+  try {
+    localStorage.setItem(LAST_SYNC_VERSION_KEY, JSON.stringify(record));
+  } catch {
+    // 忽略写入错误
+  }
+}
 
 /**
  * 检查本地数据是否为空（只有默认分类）
@@ -35,6 +104,18 @@ export class SyncConflictError extends Error {
   }
 }
 
+// 类型已统一导出至 @/types，此处 re-export 以保持向后兼容
+export type { SyncResult, SyncStep, SyncStepInfo } from "@/types";
+export { SyncStatus } from "@/types";
+
+/**
+ * 增强的冲突检测
+ *
+ * 检测策略（按优先级）：
+ * 1. **版本号比较**：如果双方版本号都高于上次同步记录 → 冲突
+ * 2. **指纹比较**：如果双方指纹都不同于上次同步记录 → 冲突
+ * 3. **时间戳兜底**：时间戳相同但指纹不同 → 可能冲突
+ */
 function getSyncConflictError(
   localData: NavData | null,
   githubData: NavData | null
@@ -42,11 +123,27 @@ function getSyncConflictError(
   const localFingerprint = getDataFingerprint(localData);
   const githubFingerprint = getDataFingerprint(githubData);
   const lastSyncedFingerprint = getLastSyncedFingerprint();
+  const lastSyncVersion = getLastSyncVersion();
 
+  // 基本校验
   if (!localData || !githubData || !localFingerprint || !githubFingerprint) {
     return null;
   }
 
+  const currentLocalVersion = getDataVersion();
+  const remoteVersion = (githubData as unknown as Record<string, unknown>)._version as number | undefined;
+
+  // 策略1: 版本号冲突检测（最可靠）
+  if (lastSyncVersion && remoteVersion) {
+    const localVersionIncreased = currentLocalVersion > lastSyncVersion.localVersion;
+    const remoteVersionIncreased = remoteVersion > lastSyncVersion.remoteVersion;
+
+    if (localVersionIncreased && remoteVersionIncreased) {
+      return "检测到同步冲突：本地和远程数据都已修改，请先备份后手动合并";
+    }
+  }
+
+  // 策略2: 指纹变化检测
   const bothChangedSinceLastSync =
     localFingerprint !== githubFingerprint &&
     lastSyncedFingerprint &&
@@ -57,9 +154,17 @@ function getSyncConflictError(
     return "检测到同步冲突：本地和 GitHub 数据都已修改，请先备份后手动合并";
   }
 
+  // 策略3: 时间戳兜底检测（仅作为最后手段）
   const localTime = localData.lastModified || 0;
   const githubTime = githubData.lastModified || 0;
-  if (localTime === githubTime && localFingerprint !== githubFingerprint) {
+
+  // 排除默认空数据的情况（lastModified=0）
+  if (
+    localTime > 0 &&
+    githubTime > 0 &&
+    localTime === githubTime &&
+    localFingerprint !== githubFingerprint
+  ) {
     return "检测到同步冲突：本地和 GitHub 时间戳相同但内容不同，请手动合并";
   }
 
@@ -90,6 +195,12 @@ export async function resolveSyncDirection(
   // 情况 1: 本地为空，GitHub 有数据 → 下载
   if (isLocalEmpty && githubData) {
     saveToLocalStorage(githubData);
+    // 记录远程版本号
+    const remoteVersion = (githubData as unknown as Record<string, unknown>)._version as number | undefined;
+    if (remoteVersion) {
+      incrementDataVersion();
+      saveSyncVersion({ localVersion: getDataVersion(), remoteVersion });
+    }
     setLastSyncTime(githubData);
     return {
       success: true,
@@ -100,7 +211,15 @@ export async function resolveSyncDirection(
 
   // 情况 2: GitHub 为空，本地有有效数据 → 上传
   if (githubData === null && !isLocalEmpty && localData) {
-    await saveDataToGitHub(token, localData, `${commitMessagePrefix} ${new Date().toISOString()}`);
+    const newVersion = incrementDataVersion();
+    // 在数据中嵌入版本号
+    const dataWithVersion = { ...localData, _version: newVersion } as NavData;
+    await saveDataToGitHub(token, dataWithVersion, `${commitMessagePrefix} ${new Date().toISOString()}`);
+    
+    const remoteVersion = (githubData as unknown as Record<string, unknown>)._version as number | undefined;
+    if (remoteVersion) {
+      saveSyncVersion({ localVersion: newVersion, remoteVersion });
+    }
     setLastSyncTime(localData);
     return {
       success: true,
@@ -126,11 +245,14 @@ export async function resolveSyncDirection(
 
     if (localTime > githubTime) {
       // 本地更新，上传
-      await saveDataToGitHub(
-        token,
-        localData,
-        `${commitMessagePrefix} ${new Date().toISOString()}`
-      );
+      const newVersion = incrementDataVersion();
+      const dataWithVersion = { ...localData, _version: newVersion } as NavData;
+      await saveDataToGitHub(token, dataWithVersion, `${commitMessagePrefix} ${new Date().toISOString()}`);
+      
+      const remoteVersion = (githubData as unknown as Record<string, unknown>)._version as number | undefined;
+      if (remoteVersion) {
+        saveSyncVersion({ localVersion: newVersion, remoteVersion });
+      }
       setLastSyncTime(localData);
       return {
         success: true,
@@ -140,6 +262,11 @@ export async function resolveSyncDirection(
     } else if (githubTime > localTime) {
       // GitHub 更新，下载
       saveToLocalStorage(githubData);
+      const remoteVersion = (githubData as unknown as Record<string, unknown>)._version as number | undefined;
+      if (remoteVersion) {
+        incrementDataVersion();
+        saveSyncVersion({ localVersion: getDataVersion(), remoteVersion });
+      }
       setLastSyncTime(githubData);
       return {
         success: true,
@@ -163,39 +290,6 @@ export async function resolveSyncDirection(
     direction: "none",
     error: "未知的同步状态",
   };
-}
-
-export enum SyncStatus {
-  IDLE = "🟢", // 空闲
-  SYNCING = "🟡", // 同步中
-  UPLOADING = "⬆️", // 上传中
-  DOWNLOADING = "⬇️", // 下载中
-  CONFLICT = "⚠️", // 冲突
-  ERROR = "🔴", // 错误
-  OFFLINE = "⚪", // 离线
-}
-
-export interface SyncResult {
-  success: boolean;
-  direction: "upload" | "download" | "none";
-  conflictResolved?: boolean;
-  message?: string;
-  error?: string;
-}
-
-export type SyncStep =
-  | "prepare"
-  | "fetching"
-  | "comparing"
-  | "uploading"
-  | "downloading"
-  | "merging"
-  | "done";
-
-export interface SyncStepInfo {
-  step: SyncStep;
-  label: string;
-  progress: number; // 0-100
 }
 
 interface SyncOptions {

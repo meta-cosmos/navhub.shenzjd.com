@@ -4,6 +4,7 @@
  */
 
 import { STORAGE_CONFIG } from "@/lib/config";
+import type { Site, Category, NavData } from "@/types";
 
 const STORAGE_KEY = "nav_data";
 const LAST_SYNC_KEY = "nav_last_sync";
@@ -11,30 +12,8 @@ const LAST_SYNC_FINGERPRINT_KEY = "nav_last_sync_fingerprint";
 const EXPIRY_KEY = "nav_expiry";
 const CACHE_DURATION = STORAGE_CONFIG.CACHE_DURATION;
 
-export interface Site {
-  id: string;
-  title: string;
-  url: string;
-  favicon?: string;
-  description?: string;
-  sort?: number;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface Category {
-  id: string;
-  name: string;
-  icon?: string; // 可选，不再强制使用 emoji
-  sort: number;
-  sites: Site[];
-}
-
-export interface NavData {
-  version: string;
-  lastModified: number;
-  categories: Category[];
-}
+// 类型已统一导出至 @/types，此处 re-export 以保持向后兼容
+export type { Site, Category, NavData } from "@/types";
 
 /**
  * 保存数据到 localStorage

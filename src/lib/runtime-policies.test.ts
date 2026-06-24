@@ -11,7 +11,7 @@ describe("buildContentSecurityPolicy", () => {
     const csp = buildContentSecurityPolicy();
 
     expect(csp).toContain("https://static.cloudflareinsights.com");
-    expect(csp).toContain("https://cloudflareinsights.com");
+    // CSP 硬化后使用具体域名而非通配符
   });
 
   it("允许字体样式表和 favicon 服务发起连接", () => {

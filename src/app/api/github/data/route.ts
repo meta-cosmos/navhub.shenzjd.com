@@ -26,8 +26,19 @@ function sanitizeErrorMessage(error: unknown): { message: string; status: number
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
+    // 为 GET 路由添加基本的 rate limiting（防止 CSRF 攻击消耗 API 配额）
+    const clientIP = getClientIP(request);
+    // GET 读取请求使用较宽松的限制：每分钟 30 次
+    const rateLimit = checkRateLimit(clientIP, 30, 60_000);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "请求过于频繁，请稍后再试" },
+        { status: 429, headers: { "Retry-After": String(Math.ceil((rateLimit.resetTime - Date.now()) / 1000)) } }
+      );
+    }
+
     const data = await getDataFromGitHubByCookie<NavData>();
     return NextResponse.json({ data }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {

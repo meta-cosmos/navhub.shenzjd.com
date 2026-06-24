@@ -205,7 +205,7 @@ export default function Home() {
         <CategoryTabBar categories={categories} />
 
         {/* 操作栏:sticky 吸顶,包含搜索和操作按钮 */}
-        <div className="sticky top-16 z-[40] mb-5 space-y-3">
+        <div className="sticky top-16 z-[40] space-y-3">
           {/* 搜索和操作栏 */}
           <div className="rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--background-secondary)] p-2 shadow-[var(--shadow-sm)]">
             <div className="flex items-center gap-2">

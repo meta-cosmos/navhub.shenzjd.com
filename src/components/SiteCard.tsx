@@ -64,18 +64,17 @@ export const SiteCard = memo(function SiteCard({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isMenuOpen]);
 
-  // 计算菜单位置（防止超出视口）
+  // 计算菜单位置（相对于视口，菜单左边缘对齐按钮右边缘）
   useEffect(() => {
-    if (!isMenuOpen || !menuRef.current || !menuBtnRef.current) return;
+    if (!isMenuOpen || !menuBtnRef.current) return;
     const btnRect = menuBtnRef.current.getBoundingClientRect();
-    const menuWidth = 144; // w-36
-    setMenuPos({ x: btnRect.right - menuWidth, y: btnRect.bottom + 4 });
     const vh = window.innerHeight;
     if (btnRect.bottom + 8 + 120 > vh) {
       setMenuPosition("flip-up");
-      setMenuPos({ x: btnRect.right - menuWidth, y: btnRect.top - 4 });
+      setMenuPos({ x: btnRect.right, y: btnRect.top - 4 });
     } else {
       setMenuPosition("auto");
+      setMenuPos({ x: btnRect.right, y: btnRect.bottom + 4 });
     }
   }, [isMenuOpen]);
 

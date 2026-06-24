@@ -197,13 +197,12 @@ export default function Home() {
   return (
     <AppLayout>
       <PageContainer>
-        {/* 分类 tab 栏(WeTab 风格,桌面+移动端统一) */}
-        <div className="mb-4">
+        {/* 操作栏:sticky 吸顶,包含分类 tab 和搜索 */}
+        <div className="sticky top-16 z-[40] mb-5 space-y-3">
+          {/* 分类 tab 栏(WeTab 风格,桌面+移动端统一) */}
           <CategoryTabBar categories={categories} />
-        </div>
 
-        {/* 操作栏:sticky 吸顶 */}
-        <div className="sticky top-16 z-30 mb-5">
+          {/* 搜索和操作栏 */}
           <div className="rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--background-secondary)] p-2 shadow-[var(--shadow-sm)]">
             <div className="flex items-center gap-2">
               <div className="min-w-0 flex-1">
@@ -233,7 +232,7 @@ export default function Home() {
                 {moreMenuOpen && (
                   <div
                     role="menu"
-                    className="absolute right-0 top-full z-50 mt-1 w-44 overflow-hidden rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--background-secondary)] py-1 shadow-[var(--shadow-lg)]"
+                    className="absolute right-0 top-full z-[60] mt-1 w-44 overflow-hidden rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--background-secondary)] py-1 shadow-[var(--shadow-lg)]"
                   >
                     <button
                       role="menuitem"

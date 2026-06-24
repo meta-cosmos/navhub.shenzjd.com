@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { SitesProvider } from "@/contexts/SitesContext";
 import { ToastProvider } from "@/components/ui/toast";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -51,11 +52,13 @@ export default function RootLayout({
       <body className="antialiased">
         <ErrorBoundary>
           <ToastProvider>
+            <AuthProvider>
             <SitesProvider>
               <ServiceWorkerRegister />
               <UpdateBanner />
               {children}
             </SitesProvider>
+          </AuthProvider>
           </ToastProvider>
         </ErrorBoundary>
       </body>

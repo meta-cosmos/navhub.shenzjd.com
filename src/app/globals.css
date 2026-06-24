@@ -320,17 +320,16 @@
     letter-spacing: -0.01em;
   }
 
-  .input,
-  .search-input {
-    @apply w-full rounded-[var(--radius-lg)] border border-[var(--input-border)] bg-[var(--background-secondary)] text-[var(--foreground)] transition-all duration-200;
-  }
-
   .input {
-    @apply px-4 py-2.5;
+    @apply w-full rounded-[var(--radius-lg)] border border-[var(--input-border)] bg-[var(--background-secondary)] text-[var(--foreground)] px-4 py-2.5 transition-all duration-200;
   }
 
+  /* 搜索框:无边框透明底,融入顶栏 */
   .search-input {
-    @apply px-4 py-3 pl-11;
+    @apply rounded-[var(--radius-md)] text-sm text-[var(--foreground)];
+    height: 34px;
+    padding-top: 0;
+    padding-bottom: 0;
   }
 
   .input::placeholder,
@@ -338,11 +337,15 @@
     @apply text-[var(--muted-foreground)];
   }
 
-  .input:focus,
-  .search-input:focus {
+  .input:focus {
     outline: none;
     border-color: var(--primary-400);
     box-shadow: 0 0 0 3px rgb(22 127 115 / 0.14);
+  }
+
+  .search-input:focus {
+    outline: none;
+    background: var(--background-secondary);
   }
 
   .empty-state {

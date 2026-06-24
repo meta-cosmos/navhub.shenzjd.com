@@ -204,11 +204,9 @@ export default function Home() {
 
           {/* 第二行: 搜索 + 操作按钮 */}
           <div className="flex items-center gap-2">
-            {/* 搜索框 — 带背景容器 */}
-            <div className="relative flex-1 max-w-sm">
-              <div className="rounded-[var(--radius-lg)] border border-[var(--input-border)] bg-[var(--background-secondary)] px-2.5 shadow-[var(--shadow-xs)] focus-within:border-[var(--primary-400)] focus-within:shadow-[var(--shadow-sm)] transition-all">
-                <SearchBar onSearch={setSearchQuery} placeholder="搜索站点..." />
-              </div>
+            {/* 搜索框 — 紧凑内联 */}
+            <div className="relative w-44 sm:w-56">
+              <SearchBar onSearch={setSearchQuery} placeholder="搜索..." />
             </div>
 
             {!isGuestMode && (

@@ -59,31 +59,31 @@ export function SearchBar({ onSearch, placeholder = "搜索站点..." }: SearchB
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={placeholder}
-          className="search-input w-full border-[var(--input-border)] bg-[var(--background-secondary)] pl-11 pr-24"
+          className="search-input w-full bg-transparent pl-8 pr-20"
           aria-label="搜索站点"
           aria-describedby="search-description"
           autoComplete="off"
         />
 
         <div
-          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)] transition-colors group-focus-within:text-[var(--primary-600)]"
+          className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)] transition-colors group-focus-within:text-[var(--primary-600)]"
           aria-hidden="true"
         >
-          <Search className="h-5 w-5" />
+          <Search className="h-4 w-4" />
         </div>
 
         {query ? (
           <button
             onClick={handleClear}
-            className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer rounded-full p-1 text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer rounded p-0.5 text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
             aria-label="清除搜索"
             type="button"
           >
-            <X className="h-4 w-4" />
+            <X className="h-3.5 w-3.5" />
           </button>
         ) : (
           <div
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--muted-foreground)]"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-[var(--muted-foreground)]"
             aria-hidden="true"
           >
             <span className="kbd">Ctrl</span>

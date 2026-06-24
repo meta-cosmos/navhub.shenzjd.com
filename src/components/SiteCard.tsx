@@ -195,7 +195,7 @@ export const SiteCard = memo(function SiteCard({
           {!isGuestMode && (
           <div
             className={cn(
-              "absolute top-1.5 right-1.5 z-10 transition-opacity duration-150",
+              "absolute -top-1.5 -right-1.5 z-10 transition-opacity duration-150",
               isMenuOpen ? "opacity-100" : "opacity-0 group-hover/card:opacity-100"
             )}
           >
@@ -203,10 +203,10 @@ export const SiteCard = memo(function SiteCard({
               data-menu-trigger
               ref={menuBtnRef}
               onClick={handleMenuToggle}
-              className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--background)]/80 backdrop-blur-sm border border-[var(--border)] transition-colors hover:bg-[var(--background-secondary)] hover:border-[var(--border-strong)] cursor-pointer shadow-[var(--shadow-xs)]"
+              className="flex h-6 w-6 items-center justify-center rounded-full transition-colors cursor-pointer text-[var(--muted-foreground)] hover:bg-[var(--background)] hover:text-[var(--foreground)] shadow-sm"
               aria-label="更多操作"
             >
-              <MoreVertical className="w-3.5 h-3.5 text-[var(--foreground-secondary)]" />
+              <MoreVertical className="w-3.5 h-3.5" />
             </button>
             {dropdownMenu}
           </div>
@@ -292,7 +292,7 @@ export const SiteCard = memo(function SiteCard({
             data-menu-trigger
             ref={menuBtnRef}
             onClick={handleMenuToggle}
-            className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--background-secondary)] transition-colors hover:bg-[var(--muted)] hover:border-[var(--border-strong)] cursor-pointer"
+            className="flex h-6 w-6 items-center justify-center rounded-full transition-colors cursor-pointer text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
             aria-label="更多操作"
           >
             <MoreVertical className="w-3.5 h-3.5 text-[var(--foreground-secondary)]" />

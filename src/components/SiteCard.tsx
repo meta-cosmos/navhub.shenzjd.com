@@ -7,6 +7,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo, memo } from "react";
+import { createPortal } from "react-dom";
 import { useData } from "@/contexts/SitesContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -124,7 +125,7 @@ export const SiteCard = memo(function SiteCard({
     setIsMenuOpen(false);
   };
 
-  const dropdownMenu = isMenuOpen && (
+  const dropdownMenu = isMenuOpen && createPortal(
     <div
       ref={menuRef}
       role="menu"
@@ -156,7 +157,8 @@ export const SiteCard = memo(function SiteCard({
         <Trash2 className="w-4 h-4" />
         <span>删除</span>
       </button>
-    </div>
+    </div>,
+    document.body
   );
 
   const deleteDialog = (

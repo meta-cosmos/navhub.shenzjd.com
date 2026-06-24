@@ -21,7 +21,7 @@ import {
 import { IconSearch, IconBook } from "@/components/icons";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageContainer } from "@/components/layout/PageContainer";
-import { SearchBar, SearchStatus } from "@/components/SearchBar";
+import { SearchStatus } from "@/components/SearchBar";
 import { CategoryTabBar } from "@/components/CategoryTabBar";
 import { ImportExportDialog } from "@/components/ImportExportDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -66,6 +66,16 @@ export default function Home() {
   const [deletingCategory, setDeletingCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+
+  // 监听来自 AppHeader 的全局搜索事件
+  useEffect(() => {
+    const handleGlobalSearch = (e: Event) => {
+      const detail = (e as CustomEvent<string>).detail;
+      setSearchQuery(detail);
+    };
+    window.addEventListener("global-search", handleGlobalSearch);
+    return () => window.removeEventListener("global-search", handleGlobalSearch);
+  }, []);
   const [showImportExport, setShowImportExport] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
@@ -197,26 +207,21 @@ export default function Home() {
   return (
     <AppLayout>
       <PageContainer>
-        {/* 顶栏:sticky 吸顶,两行布局 — 上方分类 tab,下方搜索+操作 */}
-        <div className="sticky top-16 z-[40] -mx-4 mb-4 border-b border-[var(--border)] bg-[var(--background)] px-4 pt-3 pb-2.5 space-y-2.5">
-          {/* 第一行: 分类导航 */}
+        {/* 顶栏:sticky 吸顶,分类 tab + 操作按钮单行 */}
+        <div className="sticky top-16 z-[40] -mx-4 mb-3 flex items-center gap-3 border-b border-[var(--border)] bg-[var(--background)] px-4 py-2.5">
+          {/* 左侧: 分类导航 */}
           <CategoryTabBar categories={categories} />
 
-          {/* 第二行: 搜索 + 操作按钮 */}
-          <div className="flex items-center gap-2">
-            {/* 搜索框 — 紧凑内联 */}
-            <div className="relative w-44 sm:w-56">
-              <SearchBar onSearch={setSearchQuery} placeholder="搜索..." />
-            </div>
-
+          {/* 右侧: 操作按钮 */}
+          <div className="flex flex-shrink-0 items-center gap-2 ml-auto">
             {!isGuestMode && (
               <Button
                 size="sm"
                 onClick={() => setShowAddCategoryDialog(true)}
-                className="h-9 flex-shrink-0 gap-1"
+                className="h-8 flex-shrink-0 gap-1"
                 title="新建分类 (Ctrl/Cmd+Alt+N)"
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">新建</span>
               </Button>
             )}
@@ -224,11 +229,11 @@ export default function Home() {
             <div className="relative flex-shrink-0" ref={moreRef}>
               <button
                 onClick={() => setMoreMenuOpen(!moreMenuOpen)}
-                className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--background-secondary)] text-[var(--foreground-secondary)] transition-colors hover:bg-[var(--muted)] hover:border-[var(--border-strong)] cursor-pointer"
+                className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--background-secondary)] text-[var(--foreground-secondary)] transition-colors hover:bg-[var(--muted)] hover:border-[var(--border-strong)] cursor-pointer"
                 aria-label="更多操作"
                 aria-expanded={moreMenuOpen}
               >
-                <MoreVertical className="h-4 w-4" />
+                <MoreVertical className="h-3.5 w-3.5" />
               </button>
                 {moreMenuOpen && (
                   <div

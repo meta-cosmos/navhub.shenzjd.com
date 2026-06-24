@@ -5,11 +5,12 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { SyncStatus } from "@/components/SyncStatus";
 import { Button } from "@/components/ui/button";
-import { Github, Star } from "lucide-react";
+import { Github, Star, Search } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { clearAuth, getAuthState } from "@/lib/auth";
 import { useToast } from "@/components/ui/toast";
 import { manualSync as doManualSync } from "@/lib/storage/sync-manager";
@@ -27,6 +28,26 @@ export function AppHeader() {
   const [syncStep, setSyncStep] = useState<import("@/types").SyncStepInfo | null>(null);
   const [isOnline, setIsOnline] = useState(true);
   const { showToast } = useToast();
+
+  // 搜索框状态
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // 搜索: 通过全局事件通知 page.tsx
+  useEffect(() => {
+    if (searchQuery === undefined) return;
+    window.dispatchEvent(new CustomEvent("global-search", { detail: searchQuery }));
+  }, [searchQuery]);
+
+  // 监听全局清除搜索事件
+  useEffect(() => {
+    const handleClearSearch = () => {
+      setSearchQuery("");
+    };
+    window.addEventListener("clear-global-search", handleClearSearch);
+    return () => window.removeEventListener("clear-global-search", handleClearSearch);
+  }, []);
 
   // 状态管理
   const [showForkModal, setShowForkModal] = useState(false);
@@ -76,7 +97,18 @@ export function AppHeader() {
     return () => window.removeEventListener("open-settings", handleOpenSettings);
   }, []);
 
-  // 登录处理
+  // 全局搜索快捷键 ⌘K / Ctrl+K
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
   const handleGitHubLogin = async () => {
     let clientId = githubClientId;
     if (!clientId) {
@@ -171,6 +203,46 @@ export function AppHeader() {
 
           {/* 右侧操作区 */}
           <div className="flex items-center gap-2">
+            {/* 全局搜索框 */}
+            <div
+              className={cn(
+                "relative flex items-center transition-all duration-200",
+                isSearchFocused ? "w-64 sm:w-72" : "w-40 sm:w-48"
+              )}
+            >
+              <div className={cn(
+                "flex items-center w-full rounded-[var(--radius-md)] border px-2.5 transition-all duration-200",
+                isSearchFocused
+                  ? "border-[var(--primary-400)] bg-white shadow-[var(--shadow-sm)]"
+                  : "border-[var(--border)] bg-[var(--background-secondary)] hover:border-[var(--border-strong)]"
+              )}>
+                <Search className="h-3.5 w-3.5 text-[var(--muted-foreground)] flex-shrink-0" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setIsSearchFocused(true)}
+                  onBlur={() => setIsSearchFocused(false)}
+                  placeholder="搜索站点..."
+                  aria-label="全局搜索"
+                  autoComplete="off"
+                  className="ml-1.5 w-full bg-transparent py-1.5 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] outline-none"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="flex-shrink-0 cursor-pointer p-0.5 text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
+                    type="button"
+                    aria-label="清除搜索"
+                  >
+                    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  </button>
+                )}
+              </div>
+              <kbd className="pointer-events-none absolute right-2 hidden rounded border border-[var(--border)] bg-[var(--background-secondary)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--muted-foreground)] sm:inline-block">⌘K</kbd>
+            </div>
+
             <SyncStatus />
 
             {/* GitHub Star 按钮 */}

@@ -22,8 +22,8 @@ export function CategoryTabBar({ categories }: CategoryTabBarProps) {
   const handleClick = (categoryId: string) => {
     const el = document.getElementById(`category-${categoryId}`);
     if (el) {
-      // sticky 顶栏高度约 50px (top-16 = 64px + 内容区)
-      const stickyOffset = 60;
+      // sticky 顶栏高度约 44px (top-16 = 64px + 顶栏内容 ~44px)
+      const stickyOffset = 52;
       const y = el.getBoundingClientRect().top + window.scrollY - stickyOffset;
       window.scrollTo({ top: y, behavior: "smooth" });
     }

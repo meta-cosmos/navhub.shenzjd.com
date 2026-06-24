@@ -22,8 +22,8 @@ export function MobileCategoryNav({ categories }: MobileCategoryNavProps) {
   const handleClick = (categoryId: string) => {
     const el = document.getElementById(`category-${categoryId}`);
     if (el) {
-      // sticky 顶栏高度约 50px
-      const stickyOffset = 60;
+      // sticky 顶栏高度约 44px
+      const stickyOffset = 52;
       const y = el.getBoundingClientRect().top + window.scrollY - stickyOffset;
       window.scrollTo({ top: y, behavior: "smooth" });
     }

@@ -5,7 +5,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, Suspense, lazy } from "react";
-import { useSites } from "@/contexts/SitesContext";
+import { useAuth, useData } from "@/contexts/SitesContext";
 import { Button } from "@/components/ui/button";
 import {
   Plus,
@@ -56,10 +56,10 @@ export default function Home() {
     loading,
     error,
     clearError,
-    isGuestMode,
     addCategory,
     updateSites,
-  } = useSites();
+  } = useData();
+  const { isGuestMode } = useAuth();
 
   const [showAddCategoryDialog, setShowAddCategoryDialog] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);

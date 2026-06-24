@@ -1,10 +1,10 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { SiteCard } from "./SiteCard";
-import { useSites } from "@/contexts/SitesContext";
+import { useData } from "@/contexts/SitesContext";
 
 vi.mock("@/contexts/SitesContext", () => ({
-  useSites: vi.fn(),
+  useData: vi.fn(),
 }));
 
 vi.mock("@/components/FaviconImage", () => ({
@@ -36,15 +36,25 @@ vi.mock("@/components/ui/alert-dialog", () => ({
   AlertDialogTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-const mockUseSites = vi.mocked(useSites);
+const mockUseData = vi.mocked(useData);
 
 describe("SiteCard", () => {
   beforeEach(() => {
-    mockUseSites.mockReturnValue({
+    mockUseData.mockReturnValue({
       updateSite: vi.fn(),
       deleteSite: vi.fn(),
-      isGuestMode: false,
-    } as ReturnType<typeof useSites>);
+      sites: [],
+      loading: false,
+      error: null,
+      clearError: vi.fn(),
+      addSite: vi.fn(),
+      addCategory: vi.fn(),
+      updateSites: vi.fn(),
+      refreshSites: vi.fn(),
+      deleteCategory: vi.fn(),
+      updateCategory: vi.fn(),
+      updateSite: vi.fn(),
+    } as ReturnType<typeof useData>);
   });
 
   it("点击三点菜单按钮显示编辑和删除选项", () => {

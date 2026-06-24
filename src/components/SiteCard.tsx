@@ -7,7 +7,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo, memo } from "react";
-import { useSites } from "@/contexts/SitesContext";
+import { useData } from "@/contexts/SitesContext";
 import { cn } from "@/lib/utils";
 import { FaviconImage } from "@/components/FaviconImage";
 import { EditSiteDialog } from "@/components/EditSiteDialog";
@@ -39,7 +39,7 @@ export const SiteCard = memo(function SiteCard({
   categoryId,
   view = "grid",
 }: SiteCardProps) {
-  const { updateSite, deleteSite } = useSites();
+  const { updateSite, deleteSite } = useData();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);

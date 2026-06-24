@@ -7,7 +7,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { useSites } from "@/contexts/SitesContext";
+import { useAuth } from "@/contexts/SitesContext";
 import type { Category } from "@/lib/storage/local-storage";
 
 interface OverviewBarProps {
@@ -29,7 +29,7 @@ const getClientGreeting = () => getGreeting(new Date().getHours());
 const getServerGreeting = () => "";
 
 export function OverviewBar({ categories }: OverviewBarProps) {
-  const { isGuestMode } = useSites();
+  const { isGuestMode } = useAuth();
   const greeting = useSyncExternalStore(subscribeTime, getClientGreeting, getServerGreeting);
 
   const siteCount = categories.reduce((sum, c) => sum + c.sites.length, 0);

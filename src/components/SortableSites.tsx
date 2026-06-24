@@ -22,7 +22,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useSites } from "@/contexts/SitesContext";
+import { useAuth, useData } from "@/contexts/SitesContext";
 import { SiteCard } from "@/components/SiteCard";
 import { AddSiteCard } from "@/components/AddSiteCard";
 import type { Category } from "@/lib/storage/local-storage";
@@ -68,7 +68,8 @@ export const SortableSites = memo(function SortableSites({
   allCategories,
   view = "grid",
 }: SortableSitesProps) {
-  const { updateSites, isGuestMode } = useSites();
+  const { updateSites } = useData();
+  const { isGuestMode } = useAuth();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {

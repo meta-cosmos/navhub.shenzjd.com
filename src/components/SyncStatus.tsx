@@ -4,14 +4,20 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSites } from "@/contexts/SitesContext";
+import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
+import { manualSync as doManualSync } from "@/lib/storage/sync-manager";
+import { getAuthState } from "@/lib/auth";
+import { getLastSyncTime } from "@/lib/storage/local-storage";
 
 export function SyncStatus() {
-  const { syncStatus, isOnline, lastSync, manualSync, isGuestMode } = useSites();
+  const { isGuestMode } = useAuth();
+  const [isOnline, setIsOnline] = useState(true);
+  const [lastSync, setLastSync] = useState<Date | null>(null);
+  const [syncStatus, setSyncStatus] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -19,6 +25,42 @@ export function SyncStatus() {
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  // 监听网络状态
+  useEffect(() => {
+    if (typeof navigator === "undefined") return;
+    setIsOnline(navigator.onLine);
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  // 加载最后同步时间
+  useEffect(() => {
+    try {
+      const time = getLastSyncTime();
+      if (time) setLastSync(new Date(time));
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const manualSync = useCallback(async (): Promise<{ success: boolean; message?: string; direction: string; error?: string }> => {
+    try {
+      const auth = await getAuthState();
+      if (!auth.token) {
+        return { success: false, direction: "none", error: "未认证用户" };
+      }
+      return await doManualSync(auth.token);
+    } catch (error) {
+      return { success: false, direction: "none", error: error instanceof Error ? error.message : "同步失败" };
+    }
   }, []);
 
   if (!mounted || isGuestMode) {

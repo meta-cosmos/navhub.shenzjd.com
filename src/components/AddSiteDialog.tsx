@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useEffect, useState, useCallback } from "react";
-import { useSites } from "@/contexts/SitesContext";
+import { useData } from "@/contexts/SitesContext";
 import { parseURL } from "@/lib/services/url-parser";
 import type { Site } from "@/lib/storage/local-storage";
 import { Button } from "@/components/ui/button";
@@ -43,7 +43,7 @@ export function AddSiteDialog({
   open,
   onOpenChange,
 }: AddSiteDialogProps) {
-  const { addSite } = useSites();
+  const { addSite } = useData();
   const [link, setLink] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");

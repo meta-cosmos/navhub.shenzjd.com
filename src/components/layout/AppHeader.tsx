@@ -6,12 +6,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSites } from "@/contexts/SitesContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { SyncStatus } from "@/components/SyncStatus";
 import { Button } from "@/components/ui/button";
 import { Github, Star } from "lucide-react";
-import { clearAuth } from "@/lib/auth";
+import { clearAuth, getAuthState } from "@/lib/auth";
 import { useToast } from "@/components/ui/toast";
+import { manualSync as doManualSync } from "@/lib/storage/sync-manager";
 import { getRuntimePublicConfig, type RuntimePublicConfig } from "@/lib/runtime-public-config";
 
 // 子组件
@@ -22,7 +23,9 @@ import { ForkConfirmDialog } from "./AppHeader/ForkConfirmDialog";
 import { SettingsDialog } from "./AppHeader/SettingsDialog";
 
 export function AppHeader() {
-  const { isOnline, manualSync, syncStep, authUser, isGuestMode } = useSites();
+  const { authUser, isGuestMode } = useAuth();
+  const [syncStep, setSyncStep] = useState<import("@/types").SyncStepInfo | null>(null);
+  const [isOnline, setIsOnline] = useState(true);
   const { showToast } = useToast();
 
   // 状态管理
@@ -118,7 +121,12 @@ export function AppHeader() {
 
     setIsSyncing(true);
     try {
-      const result = await manualSync();
+      const auth = await getAuthState();
+      if (!auth.token) {
+        showToast("请先登录", "warning");
+        return;
+      }
+      const result = await doManualSync(auth.token);
       if (result.success) {
         let successMsg = "同步成功";
         if (result.direction === "upload") successMsg = "📤 " + (result.message || "上传成功");

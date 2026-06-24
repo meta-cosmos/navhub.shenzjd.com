@@ -13,7 +13,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { useSites } from "@/contexts/SitesContext";
+import { useData } from "@/contexts/SitesContext";
 import {
   exportToJSON,
   exportToOPML,
@@ -32,7 +32,7 @@ interface ImportExportDialogProps {
 }
 
 export function ImportExportDialog({ open, onOpenChange }: ImportExportDialogProps) {
-  const { updateSites, sites } = useSites();
+  const { updateSites, sites } = useData();
   const { showToast } = useToast();
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);

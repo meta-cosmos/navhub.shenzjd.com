@@ -31,7 +31,7 @@ interface SortableSitesProps {
   view?: "grid" | "list";
 }
 
-/** 可排序的站点项包装器 */
+/** 可排序的站点项包装器 — 拖拽手柄覆盖整个卡片区域 */
 function SortableItem({ id, children }: { id: string; children: React.ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
 
@@ -42,8 +42,19 @@ function SortableItem({ id, children }: { id: string; children: React.ReactNode 
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      {children}
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="relative"
+    >
+      {/* 内部子元素禁用指针事件，防止图片/按钮抢走拖拽事件 */}
+      <div className="pointer-events-none">
+        {children}
+      </div>
+      {/* 恢复交互层 — 让点击/菜单等操作正常工作 */}
+      <div className="absolute inset-0 pointer-events-auto" />
     </div>
   );
 }
@@ -57,7 +68,7 @@ export const SortableSites = memo(function SortableSites({
   // 网格视图布局
   if (view === "grid") {
     return (
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-2 mt-2 w-full">
+      <div className="flex flex-wrap gap-2 mt-2 w-full">
         {category.sites.map((site) => (
           <SortableItem key={site.id} id={site.id}>
             <SiteCard

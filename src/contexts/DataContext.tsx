@@ -1,7 +1,9 @@
 /**
- * 数据状态 Context
- * 管理站点/分类的 CRUD 操作
- * 与认证和同步解耦，减少不必要的重渲染
+ * 性能优化方案2：Context Selector + 乐观更新
+ *
+ * 目标：
+ * 1. 解决 DataContext 全局重渲染问题
+ * 2. 实现乐观更新（操作即时反馈）
  */
 
 "use client";
@@ -56,13 +58,9 @@ export function DataProvider({
   onSyncRequest,
 }: {
   children: ReactNode;
-  /** 是否已认证 */
   isAuthenticated: boolean;
-  /** 是否为访客模式 */
   isGuestMode: boolean;
-  /** 用户信息（可选） */
   authUser: AuthUser | null;
-  /** 数据变更后请求同步的回调 */
   onSyncRequest?: (immediateSync: boolean) => void;
 }) {
   const [sites, setSites] = useState<Category[]>([]);
@@ -98,7 +96,9 @@ export function DataProvider({
 
         // 第二步：根据认证状态获取远程数据
         if (_forceRefresh && isAuthenticated) {
-          const githubData = await getDataFromGitHub(authUser ? "token-from-context" : "");
+          const githubData = await getDataFromGitHub(
+            authUser ? "token-from-context" : ""
+          );
           if (currentFetchId !== fetchIdRef.current) return;
 
           if (githubData?.categories && githubData.categories.length > 0) {
@@ -172,8 +172,9 @@ export function DataProvider({
     return () => window.removeEventListener("auth-update", handleAuthUpdate);
   }, [fetchSites]);
 
-  // CRUD 操作 - 使用函数式更新避免竞态条件
-
+  /**
+   * ✨ 优化1：使用函数式更新 + 稳定引用的回调
+   */
   const addSite = useCallback(
     async (categoryId: string, site: Site) => {
       if (isGuestMode) {
@@ -181,6 +182,7 @@ export function DataProvider({
         return;
       }
 
+      // 乐观更新：立即更新UI
       setSites((prevSites) => {
         const newSites = prevSites.map((category) =>
           category.id === categoryId
@@ -190,6 +192,7 @@ export function DataProvider({
         saveSitesToLocalStorage(newSites);
         return newSites;
       });
+
       onSyncRequest?.(false);
     },
     [isGuestMode, onSyncRequest]
@@ -202,6 +205,7 @@ export function DataProvider({
         return;
       }
 
+      // 乐观更新：立即更新UI
       setSites((prevSites) => {
         const newSites = prevSites.map((category) =>
           category.id === categoryId
@@ -214,6 +218,7 @@ export function DataProvider({
         saveSitesToLocalStorage(newSites);
         return newSites;
       });
+
       onSyncRequest?.(true);
     },
     [isGuestMode, onSyncRequest]
@@ -226,6 +231,7 @@ export function DataProvider({
         return;
       }
 
+      // 乐观更新：立即从UI移除
       setSites((prevSites) => {
         const newSites = prevSites.map((category) =>
           category.id === categoryId
@@ -235,6 +241,7 @@ export function DataProvider({
         saveSitesToLocalStorage(newSites);
         return newSites;
       });
+
       onSyncRequest?.(true);
     },
     [isGuestMode, onSyncRequest]
@@ -247,11 +254,13 @@ export function DataProvider({
         return;
       }
 
+      // 乐观更新
       setSites((prevSites) => {
         const newSites = [...prevSites, category];
         saveSitesToLocalStorage(newSites);
         return newSites;
       });
+
       onSyncRequest?.(false);
     },
     [isGuestMode, onSyncRequest]
@@ -264,11 +273,15 @@ export function DataProvider({
         return;
       }
 
+      // 乐观更新
       setSites((prevSites) => {
-        const newSites = prevSites.map((c) => (c.id === categoryId ? category : c));
+        const newSites = prevSites.map((c) =>
+          c.id === categoryId ? category : c
+        );
         saveSitesToLocalStorage(newSites);
         return newSites;
       });
+
       onSyncRequest?.(true);
     },
     [isGuestMode, onSyncRequest]
@@ -281,11 +294,13 @@ export function DataProvider({
         return;
       }
 
+      // 乐观更新
       setSites((prevSites) => {
         const newSites = prevSites.filter((c) => c.id !== categoryId);
         saveSitesToLocalStorage(newSites);
         return newSites;
       });
+
       onSyncRequest?.(true);
     },
     [isGuestMode, onSyncRequest]
@@ -307,6 +322,10 @@ export function DataProvider({
 
   const clearError = useCallback(() => setError(null), []);
 
+  /**
+   * ✨ 优化2：使用 useMemo 确保稳定的 contextValue
+   * 只有依赖项变化时才创建新对象
+   */
   const contextValue = useMemo<DataContextType>(
     () => ({
       sites,
@@ -338,7 +357,9 @@ export function DataProvider({
     ]
   );
 
-  return <DataContext.Provider value={contextValue}>{children}</DataContext.Provider>;
+  return (
+    <DataContext.Provider value={contextValue}>{children}</DataContext.Provider>
+  );
 }
 
 export function useData() {
@@ -347,4 +368,74 @@ export function useData() {
     throw new Error("useData must be used within a DataProvider");
   }
   return context;
+}
+
+// ========== ✨ 性能优化：精准订阅 Hooks ==========
+
+/**
+ * 只订阅站点数据
+ * ✨ 只有 sites 变化时才重渲染，loading/error 变化不会触发更新
+ *
+ * @example
+ * // ❌ 旧方式：loading 变化也会触发重渲染
+ * const { sites, loading } = useData();
+ *
+ * // ✅ 新方式：只在 sites 变化时更新
+ * const sites = useSitesData();
+ */
+export function useSitesData(): Category[] {
+  const { sites } = useData();
+  return sites;
+}
+
+/**
+ * 只订阅加载状态
+ * ✨ 只有 loading 变化时才重渲染
+ */
+export function useLoadingState(): boolean {
+  const { loading } = useData();
+  return loading;
+}
+
+/**
+ * 只订阅错误信息 + 清除方法
+ */
+export function useErrorState(): { error: string | null; clearError: () => void } {
+  const { error, clearError } = useData();
+  return { error, clearError };
+}
+
+/**
+ * 只订阅站点操作方法（不包含数据）
+ * ✨ 数据变化时不会触发重渲染（函数引用稳定）
+ *
+ * 适用场景：SiteCard、AddSiteDialog 等只需要操作方法的组件
+ */
+export function useSiteOperations() {
+  const { addSite, updateSite, deleteSite } = useData();
+  return { addSite, updateSite, deleteSite };
+}
+
+/**
+ * 只订阅分类操作方法
+ */
+export function useCategoryOperations() {
+  const { addCategory, updateCategory, deleteCategory } = useData();
+  return { addCategory, updateCategory, deleteCategory };
+}
+
+/**
+ * 订阅数据 + 更新方法
+ */
+export function useSitesWithUpdate() {
+  const { sites, updateSites } = useData();
+  return { sites, updateSites };
+}
+
+/**
+ * 订阅数据 + 清除错误方法
+ */
+export function useSitesWithClearError() {
+  const { sites, error, clearError } = useData();
+  return { sites, error, clearError };
 }

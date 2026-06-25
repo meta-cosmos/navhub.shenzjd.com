@@ -8,7 +8,7 @@
 
 import { useState, useRef, useEffect, useMemo, memo } from "react";
 import { createPortal } from "react-dom";
-import { useData } from "@/contexts/SitesContext";
+import { useSiteOperations } from "@/contexts/DataContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { FaviconImage } from "@/components/FaviconImage";
@@ -41,7 +41,7 @@ export const SiteCard = memo(function SiteCard({
   categoryId,
   view = "grid",
 }: SiteCardProps) {
-  const { updateSite, deleteSite } = useData();
+  const { updateSite, deleteSite } = useSiteOperations();
   const { isGuestMode } = useAuth();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);

@@ -12,7 +12,6 @@ import { CSS } from "@dnd-kit/utilities";
 import { useAuth } from "@/contexts/SitesContext";
 import { SiteCard } from "@/components/SiteCard";
 import { AddSiteCard } from "@/components/AddSiteCard";
-import type { Category } from "@/lib/storage/local-storage";
 
 interface SortableSitesProps {
   category: {

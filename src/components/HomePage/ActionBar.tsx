@@ -5,7 +5,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import {
   MoreVertical,
   LayoutGrid,
@@ -13,7 +12,6 @@ import {
   Check,
   ArrowDownUp,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 interface ActionBarProps {
   viewMode: "grid" | "list";

@@ -25,8 +25,8 @@ import { SettingsDialog } from "./AppHeader/SettingsDialog";
 
 export function AppHeader() {
   const { authUser, isGuestMode } = useAuth();
-  const [syncStep, setSyncStep] = useState<import("@/types").SyncStepInfo | null>(null);
-  const [isOnline, setIsOnline] = useState(true);
+  const [syncStep] = useState<import("@/types").SyncStepInfo | null>(null);
+  const [isOnline] = useState(true);
   const { showToast } = useToast();
 
   // 搜索框状态

@@ -47,13 +47,12 @@ interface SitesProviderProps {
  * SitesProvider - 组合三个独立的 Context
  */
 export function SitesProvider({ children }: SitesProviderProps) {
-  const { isAuthenticated, isGuestMode, authUser } = useAuth();
+  const { isAuthenticated, isGuestMode } = useAuth();
 
   return (
     <DataProvider
       isAuthenticated={isAuthenticated}
       isGuestMode={isGuestMode}
-      authUser={authUser}
       onSyncRequest={() => {
         // 触发同步的逻辑由调用者决定，此处仅作为桥接
       }}

@@ -7,8 +7,6 @@
 
 import { useMemo, useCallback } from "react";
 import {
-  DndContext,
-  closestCenter,
   KeyboardSensor,
   PointerSensor,
   useSensor,
@@ -17,17 +15,13 @@ import {
 } from "@dnd-kit/core";
 import {
   arrayMove,
-  SortableContext,
   sortableKeyboardCoordinates,
-  rectSortingStrategy,
-  verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import type { Category } from "@/lib/storage/local-storage";
 
 interface UseDragAndDropProps {
   categories: Category[];
   filteredCategories: Category[];
-  viewMode: "grid" | "list";
   onUpdateSites: (sites: Category[]) => void;
 }
 
@@ -41,7 +35,6 @@ interface UseDragAndDropResult {
 export function useDragAndDrop({
   categories,
   filteredCategories,
-  viewMode,
   onUpdateSites,
 }: UseDragAndDropProps): UseDragAndDropResult {
   // 配置传感器

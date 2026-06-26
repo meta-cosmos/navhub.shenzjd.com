@@ -25,7 +25,7 @@ import {
   isLocalDataValid,
 } from "@/lib/storage/local-storage";
 import { getDataFromGitHub, getYourDataFromGitHub } from "@/lib/storage/github-storage";
-import type { Category, Site, AuthUser, NavData } from "@/types";
+import type { Category, Site, NavData } from "@/types";
 
 interface DataContextType {
   sites: Category[];
@@ -55,13 +55,11 @@ export function DataProvider({
   children,
   isAuthenticated,
   isGuestMode,
-  authUser,
   onSyncRequest,
 }: {
   children: ReactNode;
   isAuthenticated: boolean;
   isGuestMode: boolean;
-  authUser: AuthUser | null;
   onSyncRequest?: (immediateSync: boolean) => void;
 }) {
   const [sites, setSites] = useState<Category[]>([]);
@@ -162,7 +160,7 @@ export function DataProvider({
         setLoading(false);
       }
     },
-    [isAuthenticated, isGuestMode, authUser]
+    [isAuthenticated, isGuestMode]
   );
 
   // 组件挂载时加载数据

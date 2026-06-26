@@ -9,7 +9,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAuth, useData } from "@/contexts/SitesContext";
+import { useAuth } from "@/contexts/SitesContext";
 import {
   useSitesData,
   useLoadingState,
@@ -36,7 +36,7 @@ import {
 } from "@/components/HomePage";
 
 // DnD 相关导入
-import { DndContext, closestCenter, DragEndEvent } from "@dnd-kit/core";
+import { DndContext, closestCenter } from "@dnd-kit/core";
 import {
   SortableContext,
   rectSortingStrategy,
@@ -70,7 +70,6 @@ export default function HomeClient({ initialSites }: { initialSites: Category[] 
   const { sensors, handleDragEnd, allSiteIds } = useDragAndDrop({
     categories,
     filteredCategories,
-    viewMode,
     onUpdateSites: updateSites,
   });
 
@@ -177,7 +176,6 @@ export default function HomeClient({ initialSites }: { initialSites: Category[] 
                       )
                     }
                     isGuestMode={isGuestMode}
-                    allCategories={categories}
                     viewMode={viewMode}
                   />
                 ))}

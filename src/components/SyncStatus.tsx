@@ -17,7 +17,7 @@ export function SyncStatus() {
   const { isGuestMode } = useAuth();
   const [isOnline, setIsOnline] = useState(true);
   const [lastSync, setLastSync] = useState<Date | null>(null);
-  const [syncStatus, setSyncStatus] = useState("");
+  const [syncStatus] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);

@@ -53,12 +53,3 @@ export function OverviewBar({ categories }: OverviewBarProps) {
     </section>
   );
 }
-
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="min-w-[72px] rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--background)] px-4 py-2 text-center">
-      <div className="text-xl font-bold tabular-nums text-[var(--primary-700)]">{value}</div>
-      <div className="text-xs text-[var(--muted-foreground)]">{label}</div>
-    </div>
-  );
-}

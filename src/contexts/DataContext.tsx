@@ -70,16 +70,22 @@ export function DataProvider({
 
   // 用于竞态控制：只允许最新的 fetch 更新状态
   const fetchIdRef = useRef(0);
+  // 用于检测认证状态从未登录→已登录的变化，确保切换后强制拉取用户数据
+  const prevAuthRef = useRef(isAuthenticated);
 
   /**
    * 初始化：Stale-While-Revalidate
    *
    * 1. 本地有效 → 立即秒开（loading=false）
-   * 2. 后台异步 revalidate：
-   *    - 已登录 + forceRefresh → 拉自己的 GitHub 数据
-   *    - 访客 → 拉示例数据（每次都拉，保证新鲜）
-   * 3. 远程有内容 → 静默替换；远程失败 → 保持本地不动
-   * 4. 本地也无效 → 仅内存设默认分类（不持久化，避免卡死）
+   * 2. 后台异步 revalidate（满足任一条件触发）：
+   *    - 本地无有效数据
+   *    - 认证状态从未登录→已登录（首次登录后拉取用户数据）
+   *    - 已登录 + forceRefresh
+   * 3. revalidate 时：
+   *    - 已登录 → 拉自己的 GitHub 数据（通过 /api/github/data 带 Cookie）
+   *    - 访客 → 拉示例数据（每次拉，保证新鲜）
+   * 4. 远程有内容 → 静默替换；远程失败 → 保持本地不动
+   * 5. 本地也无效 → 仅内存设默认分类（不持久化，避免卡死）
    */
   const fetchSites = useCallback(
     async (_forceRefresh = false) => {
@@ -96,7 +102,10 @@ export function DataProvider({
         }
 
         // 第二步：后台 Revalidate（决定要不要拉远程）
-        const shouldRevalidate = !localValid || (isAuthenticated && _forceRefresh);
+        // 认证状态从未登录→已登录时，必须重新拉取用户数据（覆盖首次加载本地无缓存的场景）
+        const authJustCompleted = isAuthenticated && !prevAuthRef.current;
+        if (authJustCompleted) prevAuthRef.current = true;
+        const shouldRevalidate = !localValid || authJustCompleted || (isAuthenticated && _forceRefresh);
 
         if (shouldRevalidate) {
           // 本地无效时，未登录/访客必须等远程结果再关闭 loading
@@ -104,12 +113,11 @@ export function DataProvider({
 
           let remoteData: NavData | null = null;
 
-          if (isAuthenticated && _forceRefresh) {
-            // 已登录强制刷新：拉自己的数据
+          if (isAuthenticated) {
+            // 已登录：拉自己的数据（带 HttpOnly Cookie 认证）
+            // 覆盖两种情况：forceRefresh 和本地无缓存首次加载
             try {
-              remoteData = await getDataFromGitHub(
-                authUser ? "token-from-context" : ""
-              );
+              remoteData = await getDataFromGitHub("token-from-context");
             } catch (e) {
               console.error("读取 GitHub 数据失败:", e);
             }

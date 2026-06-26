@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { validateOrigin, checkRateLimit, getClientIP, verifyOAuthState } from "@/lib/security";
+import { checkRateLimit, getClientIP, verifyOAuthState } from "@/lib/security";
 import { SECURITY_CONFIG } from "@/lib/config";
 
 export async function GET(request: NextRequest) {
@@ -15,10 +15,10 @@ export async function GET(request: NextRequest) {
   const error = searchParams.get("error");
   const state = searchParams.get("state");
 
-  // 验证 Origin（CSRF 保护）
-  if (!validateOrigin(request)) {
-    return NextResponse.redirect(`${origin}/?oauth_error=invalid_origin`);
-  }
+  // 注意：此处不做 validateOrigin 检查
+  // OAuth 回调是浏览器 302 重定向，不携带 Origin 头，
+  // Referer 为 github.com，会被误拒。
+  // CSRF 保护由下方的 OAuth state 参数验证承担。
 
   // Rate limiting
   const clientIP = getClientIP(request);

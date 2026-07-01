@@ -4,7 +4,7 @@
 
 "use client";
 
-import { memo } from "react";
+import { memo, useState } from "react";
 import {
   useSortable,
 } from "@dnd-kit/sortable";
@@ -12,6 +12,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useAuth } from "@/contexts/SitesContext";
 import { SiteCard } from "@/components/SiteCard";
 import { AddSiteCard } from "@/components/AddSiteCard";
+import { AddSiteDialog } from "@/components/AddSiteDialog";
 
 interface SortableSitesProps {
   category: {
@@ -54,54 +55,68 @@ export const SortableSites = memo(function SortableSites({
   view = "grid",
 }: SortableSitesProps) {
   const { isGuestMode } = useAuth();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [activeCategory, setActiveCategory] = useState(category.id);
 
-  // 网格视图布局 — 用 CSS Grid 固定列宽，避免拖拽时的挤压/跳动
-  if (view === "grid") {
-    return (
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-2 mt-2 w-full contain-layout">
-        {category.sites.map((site) => (
-          <SortableItem key={site.id} id={site.id}>
-            <SiteCard
-              id={site.id}
-              title={site.title}
-              url={site.url}
-              favicon={site.favicon}
-              categoryId={category.id}
-              view="grid"
-            />
-          </SortableItem>
-        ))}
+  const openDialog = (catId: string) => {
+    setActiveCategory(catId);
+    setDialogOpen(true);
+  };
 
-        {/* 添加站点卡片（登录态始终可见） */}
-        {!isGuestMode && (
-          <div className="w-[100px] h-[100px] flex-shrink-0">
-            <AddSiteCard activeCategory={category.id} view="grid" />
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // 列表视图布局
   return (
-    <div className="flex flex-col gap-2 mt-2">
-      {category.sites.map((site) => (
-        <SortableItem key={site.id} id={site.id}>
-          <SiteCard
-            id={site.id}
-            title={site.title}
-            url={site.url}
-            favicon={site.favicon}
-            categoryId={category.id}
-            view="list"
-          />
-        </SortableItem>
-      ))}
+    <>
+      {/* 网格视图布局 — 用 CSS Grid 固定列宽，避免拖拽时的挤压/跳动 */}
+      {view === "grid" ? (
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-2 mt-2 w-full contain-layout">
+          {category.sites.map((site) => (
+            <SortableItem key={site.id} id={site.id}>
+              <SiteCard
+                id={site.id}
+                title={site.title}
+                url={site.url}
+                favicon={site.favicon}
+                categoryId={category.id}
+                view="grid"
+              />
+            </SortableItem>
+          ))}
 
-      {/* 添加站点卡片（登录态始终可见） */}
-      {!isGuestMode && (
-        <AddSiteCard activeCategory={category.id} view="list" />
+          {/* 添加站点卡片（登录态始终可见） */}
+          {!isGuestMode && (
+            <div className="w-[100px] h-[100px] flex-shrink-0">
+              <AddSiteCard onOpen={() => openDialog(category.id)} view="grid" />
+            </div>
+          )}
+        </div>
+      ) : (
+        /* 列表视图布局 */
+        <div className="flex flex-col gap-2 mt-2">
+          {category.sites.map((site) => (
+            <SortableItem key={site.id} id={site.id}>
+              <SiteCard
+                id={site.id}
+                title={site.title}
+                url={site.url}
+                favicon={site.favicon}
+                categoryId={category.id}
+                view="list"
+              />
+            </SortableItem>
+          ))}
+
+          {/* 添加站点卡片（登录态始终可见） */}
+          {!isGuestMode && (
+            <AddSiteCard onOpen={() => openDialog(category.id)} view="list" />
+          )}
+        </div>
       )}
-    </div>
+
+      {/* 单一共享 Dialog，避免 per-card Suspense 全屏 spinner */}
+      <AddSiteDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        activeCategory={activeCategory}
+      />
+    </>
   );
 });

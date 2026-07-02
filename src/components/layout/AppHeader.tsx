@@ -11,9 +11,8 @@ import { SyncStatus } from "@/components/SyncStatus";
 import { Button } from "@/components/ui/button";
 import { Github, Star, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { clearAuth, getAuthState } from "@/lib/auth";
+import { clearAuth } from "@/lib/auth";
 import { useToast } from "@/components/ui/toast";
-import { manualSync as doManualSync } from "@/lib/storage/sync-manager";
 import { getRuntimePublicConfig, type RuntimePublicConfig } from "@/lib/runtime-public-config";
 
 // 子组件
@@ -23,7 +22,7 @@ import { UserMenu } from "./AppHeader/UserMenu";
 import { SettingsDialog } from "./AppHeader/SettingsDialog";
 
 export function AppHeader() {
-  const { authUser, isGuestMode } = useAuth();
+  const { authUser } = useAuth();
   const [syncStep] = useState<import("@/types").SyncStepInfo | null>(null);
   const { showToast } = useToast();
 
@@ -49,7 +48,6 @@ export function AppHeader() {
 
   // 状态管理
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [githubClientId, setGithubClientId] = useState("");
   const [runtimeConfigLoaded, setRuntimeConfigLoaded] = useState(false);
   const [runtimeConfig, setRuntimeConfig] = useState<RuntimePublicConfig | null>(null);
@@ -57,6 +55,7 @@ export function AppHeader() {
   // mounted 保护: 避免 SSR hydration mismatch
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 客户端挂载标记，避免 SSR/CSR 渲染不一致
     setMounted(true);
   }, []);
 
@@ -139,38 +138,6 @@ export function AppHeader() {
         window.dispatchEvent(new Event("auth-update"));
         window.location.reload();
       })();
-    }
-  };
-
-  // 手动同步处理
-  const handleManualSync = async () => {
-    if (isGuestMode || !authUser) {
-      showToast("请先登录", "warning");
-      return;
-    }
-
-    setIsSyncing(true);
-    try {
-      const auth = await getAuthState();
-      if (!auth.token) {
-        showToast("请先登录", "warning");
-        return;
-      }
-      const result = await doManualSync(auth.token);
-      if (result.success) {
-        let successMsg = "同步成功";
-        if (result.direction === "upload") successMsg = "📤 " + (result.message || "上传成功");
-        if (result.direction === "download") successMsg = "📥 " + (result.message || "下载成功");
-        if (result.direction === "none") successMsg = "✅ " + (result.message || "数据已同步");
-        showToast(successMsg, "success");
-      } else {
-        showToast(result.error || "同步失败", "error");
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "同步失败";
-      showToast(errorMessage, "error");
-    } finally {
-      setIsSyncing(false);
     }
   };
 
@@ -282,9 +249,6 @@ export function AppHeader() {
         open={showSettingsModal}
         onOpenChange={setShowSettingsModal}
         authUser={authUser}
-        isOnline={mounted ? navigator.onLine : true}
-        isSyncing={isSyncing}
-        onManualSync={handleManualSync}
         onLogout={handleGitHubLogout}
         runtimeConfig={runtimeConfig}
       />

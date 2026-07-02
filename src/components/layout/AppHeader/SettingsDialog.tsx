@@ -1,12 +1,14 @@
 /**
  * 设置对话框
- * 显示账户信息、同步状态和操作按钮
+ * 显示账户信息、同步选项和退出登录
+ *
+ * 同步由 SyncManager 后台自动驱动，本对话框不再提供手动同步入口。
  */
 
 "use client";
 
 import Image from "next/image";
-import { LogOut, RefreshCw } from "lucide-react";
+import { LogOut } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -25,12 +27,6 @@ interface SettingsDialogProps {
   onOpenChange: (open: boolean) => void;
   /** 用户信息 */
   authUser: AuthUser | null;
-  /** 是否在线 */
-  isOnline: boolean;
-  /** 是否正在同步 */
-  isSyncing: boolean;
-  /** 手动同步回调 */
-  onManualSync: () => Promise<void>;
   /** 退出登录回调 */
   onLogout: () => void;
   /** 运行时配置 */
@@ -41,9 +37,6 @@ export function SettingsDialog({
   open,
   onOpenChange,
   authUser,
-  isOnline,
-  isSyncing,
-  onManualSync,
   onLogout,
   runtimeConfig,
 }: SettingsDialogProps) {
@@ -97,48 +90,25 @@ export function SettingsDialog({
             )}
           </div>
 
-          {/* 同步状态 */}
+          {/* 同步说明 */}
           <div className="space-y-3">
             <h3 className="text-sm font-semibold text-[var(--foreground-secondary)]">同步状态</h3>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div className="rounded-lg border border-[var(--border)] bg-[var(--muted)]/45 p-2">
-                <div className="text-xs text-[var(--muted-foreground)]">网络状态</div>
-                <div className={isOnline ? "font-semibold text-success" : "font-semibold text-warning"}>
-                  {isOnline ? "在线" : "离线"}
-                </div>
-              </div>
-              <div className="rounded-lg border border-[var(--border)] bg-[var(--muted)]/45 p-2">
-                <div className="text-xs text-[var(--muted-foreground)]">登录状态</div>
-                <div className={authUser ? "font-semibold text-success" : "text-[var(--muted-foreground)]"}>
-                  {authUser ? "已登录" : "未登录"}
-                </div>
-              </div>
+            <div className="rounded-lg border border-[var(--border)] bg-[var(--muted)]/45 p-3 text-sm text-[var(--muted-foreground)]">
+              <p>同步完全自动进行，修改后 3 秒内自动推送到 GitHub。无需手动操作。</p>
             </div>
           </div>
         </div>
 
         <DialogFooter>
           {authUser && (
-            <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
-              <Button
-                variant="outline"
-                onClick={onManualSync}
-                disabled={isSyncing}
-                className="h-12 flex-1 cursor-pointer gap-1 text-base font-medium sm:flex-none"
-              >
-                <RefreshCw className={`h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
-                {isSyncing ? "同步中..." : "手动同步"}
-              </Button>
-
-              <Button
-                variant="destructive"
-                onClick={onLogout}
-                className="h-12 flex-1 cursor-pointer gap-1 text-base font-medium sm:flex-none"
-              >
-                <LogOut className="h-4 w-4" />
-                退出登录
-              </Button>
-            </div>
+            <Button
+              variant="destructive"
+              onClick={onLogout}
+              className="h-12 w-full cursor-pointer gap-1 text-base font-medium"
+            >
+              <LogOut className="h-4 w-4" />
+              退出登录
+            </Button>
           )}
         </DialogFooter>
       </DialogContent>

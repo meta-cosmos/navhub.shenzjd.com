@@ -159,9 +159,9 @@ export function DataProvider({
                     scheduleSync(local, true);
                   }
                 } else {
-                  // 自动触发已经执行过一次 → 提示用户手动同步
+                  // 自动触发已经执行过一次仍失败 → 提示稍后重试
                   console.warn("[DataContext] 自动 fork 已执行但仍 fork-not-created，跳过重复触发");
-                  showToast("仓库初始化失败，请点击右上角设置 → 手动同步重试", "warning");
+                  showToast("仓库初始化失败，请稍后重试", "warning");
                 }
               } else {
                 console.error("读取 GitHub 数据失败:", e);

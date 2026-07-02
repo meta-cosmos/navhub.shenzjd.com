@@ -76,7 +76,7 @@ export function scheduleSync(data: NavData, immediate = false): void {
 }
 
 /**
- * 从"同步钩子"路径调用（useSync hook）：强制双向同步。
+ * 强制双向同步（手动同步流程已移除，目前仅被内部冲突检测触发）。
  */
 export function forceBidirectionalSync(token: string): Promise<SyncResult> {
   const manager = getOrCreateManager(token);

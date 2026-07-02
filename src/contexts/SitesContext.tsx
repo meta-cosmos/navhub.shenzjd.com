@@ -15,14 +15,6 @@ import { AuthProvider, useAuth } from "./AuthContext";
 import { DataProvider } from "./DataContext";
 import type { Category } from "@/types";
 
-/** 兼容的 ManualSyncResult 类型（包含 message） */
-export interface ManualSyncResult {
-  success: boolean;
-  message?: string;
-  direction: string;
-  error?: string;
-}
-
 /**
  * 站点级事件回调：SitesProvider 向外暴露几个站点层级的反馈钩子。
  * useSites() 的消费方可通过这些回调感知同步结果、token 丢失等。
@@ -106,6 +98,5 @@ export function useSites() {
     syncStep: null,
     isOnline: true,
     lastSync: null,
-    manualSync: async (): Promise<ManualSyncResult> => ({ success: false, direction: "none", error: "Not configured" }),
   };
 }

@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
             forkExists: false,
             message: "fork-not-created",
             forkStatus: "absent",
-            hint: "前端收到此响应后应避免循环重试，点击手动同步或页面可见变化时会再触发一次",
+            hint: "前端收到此响应后应避免循环重试，页面可见变化时会再触发一次",
           },
           { headers },
         );

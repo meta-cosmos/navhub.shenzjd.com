@@ -198,7 +198,7 @@ export async function ensureForkedFromCookie(): Promise<void> {
   // fork 创建成功（或 422 重复创建）→ 轮询等待仓库可用
   const ready = await pollForkReady(octokit, login);
   if (!ready) {
-    const msg = `fork 已提交但约 50s 内仍未就绪，请稍后在设置页点击"手动同步"重试`;
+    const msg = `fork 已提交但约 50s 内仍未就绪，请稍后重试`;
     const err = new Error(msg) as Error & { status?: number };
     err.status = 504;
     err.name = "ForkNotReadyError";
@@ -279,9 +279,9 @@ export async function saveDataToGitHubByCookie<T>(data: T, message?: string): Pr
     // file not found, create new
   }
 
-  // 拼接网站宣传前缀：
+  // 拼接网站宣传后缀：
   // - 默认场景（初始 fork / 兜底）→ `[skip ci] Update data/sites.json`
-  // - 用户主动操作 → sync-manager 传入 `[skip ci] Manual sync {iso}` 等
+  // - 自动同步 → sync-manager 传入 `[skip ci] Auto sync {iso}` 等
   // 末尾统一加 ` · by https://navhub.shenzjd.com` 作为宣传
   const baseMessage = message || `[skip ci] Update ${DATA_FILE_PATH}`;
   const finalMessage = `${baseMessage}${COMMIT_MESSAGE_SUFFIX}`;

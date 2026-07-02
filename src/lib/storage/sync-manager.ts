@@ -37,11 +37,6 @@ function resolveToken(token: SyncOptions["token"]): string | undefined {
   return token;
 }
 
-function resolveIsAuthenticated(auth: SyncOptions["isAuthenticated"]): boolean {
-  if (typeof auth === "function") return auth();
-  return !!auth;
-}
-
 /**
  * 获取当前数据版本号（递增整数）
  * 每次数据变更时递增，用于精确的冲突检测
@@ -704,27 +699,3 @@ export async function initialSync(token?: string): Promise<NavData | null> {
   };
 }
 
-/**
- * 手动同步（用户触发）- 双向同步版本
- * 返回同步结果用于 UI 反馈
- */
-export async function manualSync(token: string): Promise<SyncResult> {
-  // 检查网络（确保在浏览器环境）
-  if (typeof navigator !== "undefined" && !navigator.onLine) {
-    throw new Error("当前离线，无法同步");
-  }
-
-  try {
-    // 1. 获取本地数据
-    const localData = loadFromLocalStorage();
-
-    // 2. 获取 GitHub 数据
-    const githubData = await getDataFromGitHub(token);
-
-    // 3. 使用共享的同步逻辑
-    return await resolveSyncDirection(localData, githubData, token, `[skip ci] Manual sync`);
-  } catch (error) {
-    console.error("手动同步失败:", error);
-    throw error;
-  }
-}

@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "lastModified": 1782299807317,
+  "lastModified": 1782962691692,
   "categories": [
     {
       "id": "default",
@@ -72,13 +72,6 @@
       "icon": "📁",
       "sort": 1,
       "sites": [
-        {
-          "id": "1767191518117",
-          "title": "秘塔AI搜索",
-          "url": "https://metaso.cn/",
-          "favicon": "https://metaso.cn/apple-touch-icon.png",
-          "sort": 0
-        },
         {
           "id": "1767189449211",
           "title": "Claude Code - AI coding agent for terminal & IDE | Claude",
@@ -584,6 +577,5 @@
         }
       ]
     }
-  ],
-  "_version": 1
+  ]
 }

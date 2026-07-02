@@ -139,7 +139,10 @@ export function DataProvider({
             try {
               remoteData = await getDataFromGitHub("token-from-context");
             } catch (e) {
-              // fork 仓库不存在 → 主动触发一次写操作，后端会同步创建 fork
+              // fork 仓库不存在 → toast 提示用户可通过写操作触发 fork
+              // 不自动触发 scheduleSync：GET 路径不会修改状态，
+              // 写入操作（添加站点/分类）才是真正触发 fork 创建的正确位置。
+              // 自动触发只能制造 fork 422（already exists）和重复 poll。
               const err = e as Error & { name?: string; status?: number };
               const isForkNotCreated =
                 err?.name === "ForkNotCreatedError" ||
@@ -148,13 +151,11 @@ export function DataProvider({
 
               if (isForkNotCreated && !autoForkTriggeredRef.current) {
                 autoForkTriggeredRef.current = true;
-                console.info("[DataContext] fork 不存在，自动触发首次同步以创建 fork");
-                showToast("正在为您初始化仓库...", "info");
-                const local = loadFromLocalStorage();
-                if (local) {
-                  // immediate=true 绕过防抖，后端确保写入前 fork 已就绪
-                  scheduleSync(local, true);
-                }
+                console.info(
+                  "[DataContext] fork 仓库不存在，首次登录等待写操作触发；本次显示 toast 提示用户",
+                );
+                // 5s 后自动消失，不干扰用户操作
+                showToast("尚未 Fork 仓库，添加任意书签后将自动完成初始化", "warning", 6000);
               } else if (!isForkNotCreated) {
                 console.error("读取 GitHub 数据失败:", e);
               }

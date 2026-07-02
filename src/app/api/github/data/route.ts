@@ -47,15 +47,30 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // fork 流程大阶段标记，前端可以用来显示"检查 → 创建 → 轮询 → 就绪"全流程
+    const headers = {
+      "Cache-Control": "no-store",
+      "X-Fork-Stage": "check",
+    } as const;
+
     try {
       const data = await getDataFromGitHubByCookie<NavData>();
-      return NextResponse.json({ data, forkExists: true }, { headers: { "Cache-Control": "no-store" } });
+      return NextResponse.json(
+        { data, forkExists: true, forkStatus: "ready" },
+        { headers },
+      );
     } catch (error) {
       if (error instanceof ForkNotCreatedError) {
         // 404 fork 仓库不存在 → 明确告诉前端
         return NextResponse.json(
-          { data: null, forkExists: false, message: "fork-not-created" },
-          { headers: { "Cache-Control": "no-store" } }
+          {
+            data: null,
+            forkExists: false,
+            message: "fork-not-created",
+            forkStatus: "absent",
+            hint: "前端收到此响应后应避免循环重试，点击手动同步或页面可见变化时会再触发一次",
+          },
+          { headers },
         );
       }
       throw error;

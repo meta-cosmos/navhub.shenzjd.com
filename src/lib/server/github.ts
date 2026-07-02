@@ -4,9 +4,10 @@ import { GITHUB_CONFIG } from "@/lib/config";
 
 // fork 轮询 poll 参数——与 @/lib/config SYNC_CONFIG 保持同源，
 // 直接内联避免循环依赖；修改时请两处同步维护。
-const FORK_POLL_MAX_ATTEMPTS = 5;
+// 8 次 × 1s × 2.0 退避 ≈ 最多 51s 总等待（覆盖 GitHub fork 异步长尾场景）
+const FORK_POLL_MAX_ATTEMPTS = 8;
 const FORK_POLL_INITIAL_DELAY_MS = 1000;
-const FORK_POLL_BACKOFF_FACTOR = 1.8;
+const FORK_POLL_BACKOFF_FACTOR = 2.0;
 
 //（SYNC_CONFIG.FORK_* 在 @/lib/config 同名维护）
 
@@ -178,10 +179,12 @@ export async function ensureForkedFromCookie(): Promise<void> {
     } else {
       const message =
         status === 403
-          ? "GitHub 权限不足，无法创建 fork（可能触发速率限制或无权访问原仓库）"
+          ? "GitHub 权限不足或触发速率限制，请稍后再试（GitHub X-RateLimit-Remaining header 接近 0 时无法 fork）"
           : status === 404
-            ? "原仓库不存在，请确认 GITHUB 配置正确"
-            : `创建 fork 失败 (status=${status ?? "unknown"})`;
+            ? "原仓库不存在，请确认 GITHUB 配置正确（owner/repo 是否正确）"
+            : status === 429
+              ? "GitHub 速率限制 (429)，请稍后再试"
+              : `创建 fork 失败 (status=${status ?? "unknown"})`;
       const wrapped = new Error(message) as Error & { status?: number };
       wrapped.status = status;
       wrapped.name = "ForkCreateError";
@@ -192,11 +195,27 @@ export async function ensureForkedFromCookie(): Promise<void> {
   // fork 创建成功（或 422 重复创建）→ 轮询等待仓库可用
   const ready = await pollForkReady(octokit, login);
   if (!ready) {
-    const msg = `fork 已提交但约 12s 内仍未就绪，请稍后在设置页点击"手动同步"重试`;
+    const msg = `fork 已提交但约 50s 内仍未就绪，请稍后在设置页点击"手动同步"重试`;
     const err = new Error(msg) as Error & { status?: number };
     err.status = 504;
     err.name = "ForkNotReadyError";
     throw err;
+  }
+}
+
+/**
+ * 检查 fork 仓库元数据是否可见。
+ * 返回 true 表示仓库可访问，false 表示仓库仍 404（未创建或 GitHub 异步 fork 尚未完成）。
+ */
+async function isForkRepoVisible(octokit: Octokit, login: string): Promise<boolean> {
+  try {
+    await octokit.repos.get({
+      owner: login,
+      repo: ORIGINAL_REPO,
+    });
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -212,20 +231,28 @@ export async function getDataFromGitHubByCookie<T>(): Promise<T | null> {
     });
 
     if (!("content" in response.data)) {
+      // 仓库存在但 content 是目录（极少出现）→ 当空数据处理
       return null;
     }
 
     const content = Buffer.from(response.data.content, "base64").toString("utf-8");
     return JSON.parse(content) as T;
   } catch (error) {
-    // 404 分两种情况：
-    // (a) fork 仓库不存在 → 抛 ForkNotCreatedError，让前端知道应该展示 "fork 提示"
-    // (b) fork 仓库存在但 data/sites.json 文件不存在 → 抛 404 让前端感知道远程还是空的
     const status = (error as { status?: number }).status;
-    if (status === 404) {
+    if (status !== 404) {
+      // 非 404 的认证/服务器错误 → 直接抛
+      throw error;
+    }
+
+    // 404 必须区分两种情况，否则前端会把"文件 404"误判为"仓库未 fork"：
+    // (a) fork 仓库不存在 → ForkNotCreatedError，前端据此触发写操作自动创建
+    // (b) fork 仓库存在但 data/sites.json 文件不存在 → 远程为空，返回 null
+    const repoVisible = await isForkRepoVisible(octokit, login);
+    if (!repoVisible) {
       throw new ForkNotCreatedError();
     }
-    throw error;
+    // 仓库存在但文件不存在 → 返回 null，让前端把 fork 当成空仓库处理
+    return null;
   }
 }
 

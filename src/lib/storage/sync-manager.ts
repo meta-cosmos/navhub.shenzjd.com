@@ -551,7 +551,30 @@ export class SyncManager {
     this.updateStatus(SyncStatus.SYNCING);
 
     try {
-      const githubData = await getDataFromGitHub(liveToken);
+      // 读阶段：fork-not-created 场景下 githubData 会抛 ForkNotCreatedError。
+      // 此时 saveDataToGitHub 是首个写操作，POST /api/github/data 的
+      // saveDataToGitHubByCookie 会先 ensureForkedFromCookie 自动创建 fork。
+      // 因此这里 catch ForkNotCreatedError 后继续走写入，不阻断 fork 初始化流程。
+      // 其他错误（401/403/500/网络）仍抛错——这些情况下 save 也会失败，尽早失败更清晰。
+      let githubData: NavData | null = null;
+      try {
+        githubData = await getDataFromGitHub(liveToken);
+      } catch (readError) {
+        const errName = (readError as { name?: string }).name;
+        const errStatus = (readError as { status?: number }).status;
+        const isForkNotCreated =
+          errName === "ForkNotCreatedError" ||
+          (readError as { message?: string })?.message === "fork-not-created" ||
+          errStatus === 404;
+        if (!isForkNotCreated) {
+          throw readError;
+        }
+        // 404 / fork-not-created 不阻断写入 → 让 saveDataToGitHub 触发后端自动 fork
+        console.info(
+          "[SyncManager] getData 返回 fork-not-created，跳过直接进行 save（后端将自动 createFork）",
+        );
+      }
+
       const conflictError = getSyncConflictError(data, githubData);
       if (conflictError) {
         throw new SyncConflictError(conflictError);

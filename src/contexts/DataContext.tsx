@@ -134,34 +134,40 @@ export function DataProvider({
           let remoteData: NavData | null = null;
 
           if (isAuthenticated) {
-            // 已登录：拉自己的数据（带 HttpOnly Cookie 认证）
-            // 覆盖两种情况：forceRefresh 和本地无缓存首次加载
             try {
               remoteData = await getDataFromGitHub("token-from-context");
             } catch (e) {
-              // fork 仓库不存在 → toast 提示用户可通过写操作触发 fork
-              // 不自动触发 scheduleSync：GET 路径不会修改状态，
-              // 写入操作（添加站点/分类）才是真正触发 fork 创建的正确位置。
-              // 自动触发只能制造 fork 422（already exists）和重复 poll。
               const err = e as Error & { name?: string; status?: number };
               const isForkNotCreated =
                 err?.name === "ForkNotCreatedError" ||
-                err?.message === "fork-not-created" ||
-                err?.status === 404;
+                err?.message === "fork-not-created";
 
-              if (isForkNotCreated && !autoForkTriggeredRef.current) {
-                autoForkTriggeredRef.current = true;
-                console.info(
-                  "[DataContext] fork 仓库不存在，首次登录等待写操作触发；本次显示 toast 提示用户",
-                );
-                // 5s 后自动消失，不干扰用户操作
-                showToast("尚未 Fork 仓库，添加任意书签后将自动完成初始化", "warning", 6000);
-              } else if (!isForkNotCreated) {
+              if (isForkNotCreated) {
+                // fork 仓库不存在 → 自动触发 fork 创建链：
+                // 后端 POST /api/github/data 会在写入 data/sites.json 之前
+                // 先执行 ensureForkedFromCookie → createFork → pollForkReady
+                //（poll 最多 8 次 × 1s × 2.0 退避 ≈ 50s 总等待）
+                // 成功后前端自动第二次 fetchSites 拿到数据。
+                if (!autoForkTriggeredRef.current) {
+                  autoForkTriggeredRef.current = true;
+                  const local = loadFromLocalStorage();
+                  if (local) {
+                    console.info(
+                      "[DataContext] fork 不存在，自动触发首次写操作（immediate）",
+                    );
+                    showToast("正在为您初始化 GitHub 仓库，请稍候...", "info", 8000);
+                    scheduleSync(local, true);
+                  }
+                } else {
+                  // 自动触发已经执行过一次 → 提示用户手动同步
+                  console.warn("[DataContext] 自动 fork 已执行但仍 fork-not-created，跳过重复触发");
+                  showToast("仓库初始化失败，请点击右上角设置 → 手动同步重试", "warning");
+                }
+              } else {
                 console.error("读取 GitHub 数据失败:", e);
               }
             }
           } else if (!isAuthenticated || isGuestMode) {
-            // 访客：拉示例数据（getYourDataFromGitHub 内部已 catch，不会抛）
             remoteData = await getYourDataFromGitHub();
           }
 
